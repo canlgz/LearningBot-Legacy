@@ -1,50 +1,47 @@
-# LearningBot → WriteToLearn
+# LearningBot → WriteToLearn 的演進
 
-## What LearningBot / backupBot did
+## LearningBot / backupBot 做了什麼？
 
-LearningBot was a LINE-first personal learning record and backup bot. A
-message or file sent through LINE was stored in a Google Spreadsheet and Google
-Drive. The bot organised records by learning space, presented them in LINE Flex
-Message carousels, and offered search, browsing, broadcast, and scheduled
-reminder features.
+LearningBot 是一個以 LINE 為核心的個人學習紀錄與備份 Bot。使用者透過 LINE 傳送的訊息或
+檔案，會被存進 Google 試算表與 Google 雲端硬碟；Bot 再以 LINE Flex Message 輪播卡片提供
+瀏覽、搜尋、廣播與定時提醒。
 
 ```text
-LINE event
+LINE 事件
   → doPost(e)
-  → command / postback routing
-  ├─ Spreadsheet: learner spaces, logs, metadata
-  ├─ Drive: uploaded files and thumbnails
-  ├─ LINE reply / push API: menus and Flex carousels
-  └─ time triggers: reminders and notifications
+  → 指令／postback 路由
+  ├─ 試算表：學習空間、紀錄與中繼資料
+  ├─ Drive：上傳檔案與縮圖
+  ├─ LINE reply / push API：選單與 Flex 輪播卡片
+  └─ 定時觸發條件：提醒與通知
 ```
 
-## Evolution comparison
+## 演進比較
 
-| Dimension | LearningBot / backupBot | WriteToLearn |
+| 面向 | LearningBot / backupBot | WriteToLearn |
 | --- | --- | --- |
-| Central interaction | LINE commands, postbacks, and Flex Messages | Learning-process writing workflow in LINE |
-| Storage model | One bound Spreadsheet plus Drive folders | Structured records and retrieval-oriented knowledge base |
-| Configuration | Global constants embedded in source (historically) | Student-facing setup and explicit configuration guidance |
-| Access control | Administrator / host LINE IDs stored in sheets | Explicit ownership and onboarding flow |
-| Retrieval | Sheet browsing, page navigation, keyword search | Drive-based retrieval and RAG-oriented design |
-| Teaching value | Shows the early, direct event-to-sheet architecture | Shows how the same learning-record idea grew into a maintainable learning tool |
+| 主要互動 | LINE 指令、postback 與 Flex Message | 在 LINE 中進行學習歷程書寫 |
+| 儲存模型 | 一份綁定試算表加上 Drive 資料夾 | 結構化紀錄與檢索導向知識庫 |
+| 設定方式 | 歷史上以原始碼全域常數保存 | 面向學生的安裝說明與明確設定流程 |
+| 權限模型 | 試算表內儲存管理者／主持人 LINE ID | 明確的擁有者與首次啟用流程 |
+| 取回資料 | 工作表瀏覽、分頁與關鍵字搜尋 | Drive 檢索與 RAG 導向設計 |
+| 教學價值 | 呈現早期直接由事件寫入試算表的架構 | 呈現同一個學習紀錄理念如何發展為可維護工具 |
 
-## Reading the source
+## 原始碼閱讀地圖
 
-| File | Role |
+| 檔案 | 角色 |
 | --- | --- |
-| `main.js` | LINE webhook (`doPost`), message routing, uploads, replies |
-| `parameters.js` | Configuration and sheet-layout constants |
-| `defined function.js` | Spreadsheet helpers, room creation, profiles, reusable replies |
-| `menu.js` | Flex-message menus, broadcasts, file browsing and retrieval |
-| `carouselInfo.js` / `show_searchResult.js` | Paginated carousel and search result rendering |
-| `triggers.js` | Time-based reminders and trigger lifecycle |
-| `getThumbnailURL.js` | Drive thumbnail and content helpers |
+| `main.js` | LINE webhook (`doPost`)、訊息路由與上傳處理 |
+| `parameters.js` | 設定與試算表欄位常數 |
+| `defined function.js` | 試算表輔助函式、空間建立、個人資料與共用回覆 |
+| `menu.js` | Flex 選單、廣播、檔案瀏覽與取回 |
+| `carouselInfo.js` / `show_searchResult.js` | 分頁輪播卡片與搜尋結果呈現 |
+| `triggers.js` | 定時提醒與觸發條件生命週期 |
+| `getThumbnailURL.js` | Drive 縮圖與內容輔助函式 |
 
-## Discussion prompts
+## 討論題目
 
-1. What did a spreadsheet make easy for an early prototype?
-2. Which assumptions make this historical design difficult to share safely?
-3. How does moving credentials to Script Properties change the maintenance model?
-4. Which parts of the LINE event router survived conceptually in WriteToLearn?
-
+1. 對早期原型而言，試算表讓哪些事情變得容易？
+2. 這個歷史設計中，哪些假設讓它難以安全分享？
+3. 將憑證移到 Script Properties，如何改變維護模式？
+4. LINE 事件路由中，哪些概念在 WriteToLearn 裡仍然延續？

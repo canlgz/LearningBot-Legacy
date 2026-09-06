@@ -1,41 +1,36 @@
-# Spreadsheet template for the LearningBot sandbox
+# LearningBot 沙盒的試算表模板
 
-LearningBot is a **bound Apps Script**. The script reads the spreadsheet in
-which it is installed with `SpreadsheetApp.getActiveSpreadsheet()`.
+LearningBot 是一支**綁定式 Apps Script**，會用 `SpreadsheetApp.getActiveSpreadsheet()` 讀取它所
+綁定的試算表。
 
-Create one new spreadsheet for testing—never use a production or class-record
-spreadsheet—and add these sheets:
+請建立一份新的測試試算表，切勿使用正式課程或個人資料，並建立下列工作表：
 
-| Sheet | Required | Purpose |
+| 工作表 | 是否必要 | 用途 |
 | --- | --- | --- |
-| `templet` | Yes | The template copied whenever the bot meets a new LINE user, room, or group. The spelling is historical and must not be changed. |
-| `Triggers` | Recommended | Used by the historical scheduled-reminder functions. |
-| `Learning Center` | Recommended | An example centre sheet; its exact name must match `LEARNING_CENTER_SHEET_NAME`. |
+| `templet` | 必要 | Bot 初次遇到新的 LINE 使用者、聊天室或群組時會複製的模板。這是歷史拼字，不能改名。 |
+| `Triggers` | 建議 | 歷史定時提醒功能使用。 |
+| `Learning Center` | 建議 | 範例學習中心工作表；名稱必須與 `LEARNING_CENTER_SHEET_NAME` 相同。 |
 
-## `templet` layout
+## `templet` 的欄位配置
 
-The first eight rows are control rows. Do not add headings in column C before
-row 9: the old code uses the first empty cell in that column as its user index.
+前八列是控制列。第 9 列前的 C 欄不可填入標題：舊程式會以 C 欄第一個空白格作為使用者索引。
 
-| Row | Column A | Value for a fresh template |
+| 列 | A 欄用途 | 新模板的值 |
 | --- | --- | --- |
-| 1 | temporary navigation state | leave blank |
-| 2 | room owner LINE user ID | leave blank; the bot fills it |
-| 3 | room label | leave blank; the bot fills it |
-| 4 | Drive upload-folder ID | leave blank; the bot fills it |
-| 5 | forwarding interval in minutes | `-1` (paused) |
-| 6 | message count | `0` |
-| 7 | broadcast start marker | `--` |
-| 8 | broadcast selection marker | `--` |
-| 9 onward | event records | leave blank; the bot appends records |
+| 1 | 暫存導覽狀態 | 留白 |
+| 2 | 空間擁有者 LINE 使用者 ID | 留白，由 Bot 填入 |
+| 3 | 空間顯示名稱 | 留白，由 Bot 填入 |
+| 4 | Drive 上傳資料夾 ID | 留白，由 Bot 填入 |
+| 5 | 轉訊間隔（分鐘） | `-1`（暫停） |
+| 6 | 訊息累計數 | `0` |
+| 7 | 廣播起始標記 | `--` |
+| 8 | 廣播選取標記 | `--` |
+| 第 9 列起 | 事件紀錄 | 留白，由 Bot 新增 |
 
-For readability, you may add labels in column B. The historical code records
-message data in columns E–K: forwarding state, sender ID, sender name,
-timestamp, type, visible content, and raw payload or Drive file ID.
+可在 B 欄補上說明文字，增加可讀性。歷史程式會將訊息資料寫入 E–K 欄：轉訊狀態、發送者 ID、
+發送者名稱、時間、類型、可見內容，以及原始 payload 或 Drive 檔案 ID。
 
-## What happens on the first LINE message
+## 收到第一則 LINE 訊息後
 
-The bot creates a new worksheet whose name is the LINE `userId`, `roomId`, or
-`groupId`, copies `templet`, creates a matching subfolder beneath
-`DESTINATION_FOLDER_ID`, then begins appending records from row 9.
-
+Bot 會以 LINE 的 `userId`、`roomId` 或 `groupId` 作為工作表名稱，複製 `templet`，並在
+`DESTINATION_FOLDER_ID` 指向的資料夾中建立對應子資料夾；之後的資料會從第 9 列開始新增。
