@@ -1,25 +1,28 @@
-# LearningBot、WriteToLearn 與意識 Bot：三個互補的學習工具
+# LearningBot、WriteToLearn 與 ConsciousnessBot：設計演變與邊界
 
 > 本文比較 LearningBot / backupBot、WriteToLearn 與
 > [ConsciousnessBot](https://github.com/canlgz/ConsciousnessBot)。意識 Bot 已有可運作的程式，
 > 目前仍持續與 AI 協作演進；本文只描述已能從原始碼與文件確認的功能。
 
-## 先說結論：不是單純的新舊版本
+## 先說結論：不是可互接的三段管線
 
 兩者都使用 LINE、Google Apps Script 與 Google Drive，也都讓使用者把學習訊息留在日常對話中；
 但它們處理的是不同問題。
 
 ```text
-LearningBot       寫下來、存下來、找得到
-      ↓
-WriteToLearn      看出脈絡、辨識轉折、形成學習歷程
-      ↘
-意識 Bot          唯讀觀察記寫背景，主動提醒並陪伴反思
+LearningBot（歷史工具）  寫下來、存下來、找得到
+       │
+       └── 與 ConsciousnessBot 沒有資料或功能連結
+
+WriteToLearn  寫入原始記寫、形成 topic / context / journey
+       ↓  唯讀 Google Drive 記憶層
+ConsciousnessBot  計算資料式感覺描述、主動提醒並在 Telegram 互動
 ```
 
 LearningBot 的核心是「把散落的學習痕跡收住」；WriteToLearn 的核心是「讓痕跡逐步成為可理解、
-可回應的學習歷程」。意識 Bot 則是獨立的旁路服務：讀取 WriteToLearn 的記憶層，但不改寫它，
-把背景狀態與值得留意的學習訊號帶到 Telegram。
+可回應的學習歷程」。ConsciousnessBot 則是 **WriteToLearn 專用**的獨立旁路服務：讀取
+WriteToLearn 的記憶層，但不改寫它，把背景狀態與值得留意的學習訊號帶到 Telegram。它不讀取、
+不支援、也不需要 LearningBot。
 
 ## 1. 設計目的與使用者承諾
 
@@ -149,5 +152,5 @@ WriteToLearn 的 Drive 記憶層
 
 ## 8. 一句話區分
 
-**LearningBot 保存學習留下的痕跡；WriteToLearn 讓痕跡長成可回看的歷程；意識 Bot 則唯讀觀察
-這些歷程，在適當時機把值得反思的訊號帶回學習者身邊。**
+**LearningBot 保存學習留下的痕跡；WriteToLearn 讓痕跡長成可回看的歷程；ConsciousnessBot
+只唯讀觀察 WriteToLearn 的歷程，並在適當時機把值得反思的訊號帶回學習者身邊。**
