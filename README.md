@@ -1,8 +1,11 @@
-# LearningBot / backupBot：歷史教學版
+# LearningBot / backupBot：記寫歷程記錄的原始構想
 
-這是一份經過**去識別化處理的歷史快照**。LearningBot 後來曾命名為
-`backupBot`，也是 [WriteToLearn](https://github.com/canlgz/WriteToLearn) 的前身。
-本庫用於程式閱讀、課程討論與工具演進比較，**不是**可直接投入正式環境的 Bot。
+這是一份經過**去識別化處理的早期實作快照**。LearningBot 後來曾命名為
+`backupBot`。它提出的原始問題是：如何讓日常對話中的文字、檔案與課堂互動，留下可保存、
+可取回、可回看的記寫軌跡。
+
+本庫用於程式閱讀與課程討論，呈現這個原始構想如何以 LINE、Google 試算表與 Google Drive
+落實；**不是**可直接投入正式環境的 Bot。
 它也不是安裝 WriteToLearn 或 ConsciousnessBot 的前置條件。
 
 ## 為什麼建立這個資料庫？
@@ -11,11 +14,11 @@ LearningBot 以 LINE 作為個人學習檔案庫的入口：接收訊息與檔�
 Google 試算表與 Google 雲端硬碟，並透過 LINE 選單與 Flex Message 輪播卡片，讓學習者
 瀏覽、搜尋及取回自己的紀錄。
 
-建議先閱讀[演進說明](docs/EVOLUTION.md)，再開啟原始碼；若要建立課堂用沙盒，請依照
+建議先閱讀[原始構想與後續發展](docs/EVOLUTION.md)，再開啟原始碼；若要建立課堂用沙盒，請依照
 [詳細安裝流程](docs/INSTALL.md)操作。
 
-若要理解它與 WriteToLearn 不是單純的新舊版本，而是不同階段的工具，請閱讀
-[LearningBot、WriteToLearn 與意識 Bot 的完整比較](docs/LEARNING_TOOLS_COMPARISON.md)。
+若要理解原始構想如何在 WriteToLearn 中擴展為完整的記寫系統，請閱讀
+[LearningBot、WriteToLearn 與 ConsciousnessBot 的關係說明](docs/LEARNING_TOOLS_COMPARISON.md)。
 
 ## 重要安全提醒
 
@@ -26,7 +29,7 @@ webhook、試算表、Drive 資料夾或學生資料。
 
 ## 原始碼結構
 
-歷史 Apps Script 原始碼放在 [`src`](src) 中，盡量保留原本的檔案結構，讓學生能追查一個
+早期 Apps Script 原始碼放在 [`src`](src) 中，盡量保留原本的檔案結構，讓學生能追查一個
 真實的 GAS / LINE Bot 原型：
 
 ```text

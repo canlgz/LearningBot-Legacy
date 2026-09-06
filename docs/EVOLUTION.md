@@ -1,4 +1,4 @@
-# LearningBot → WriteToLearn 的演進
+# 從 LearningBot 的原始構想到 WriteToLearn
 
 ## LearningBot / backupBot 做了什麼？
 
@@ -16,7 +16,7 @@ LINE 事件
   └─ 定時觸發條件：提醒與通知
 ```
 
-## 演進比較
+## 原始構想與後續發展的比較
 
 | 面向 | LearningBot / backupBot | WriteToLearn |
 | --- | --- | --- |
