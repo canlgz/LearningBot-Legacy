@@ -13,6 +13,9 @@ Google 試算表與 Google 雲端硬碟，並透過 LINE 選單與 Flex Message 
 建議先閱讀[演進說明](docs/EVOLUTION.md)，再開啟原始碼；若要建立課堂用沙盒，請依照
 [詳細安裝流程](docs/INSTALL.md)操作。
 
+若要理解它與 WriteToLearn 不是單純的新舊版本，而是不同階段的工具，請閱讀
+[LearningBot、WriteToLearn 與意識 Bot 的完整比較](docs/LEARNING_TOOLS_COMPARISON.md)。
+
 ## 重要安全提醒
 
 原始專案曾含有實際憑證與識別資料，本庫已經移除。此處**不包含**可用的正式 token、
