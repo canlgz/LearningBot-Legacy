@@ -1,7 +1,7 @@
 # LearningBot、WriteToLearn 與意識 Bot：三個互補的學習工具
 
 > 本文比較 LearningBot / backupBot、WriteToLearn 與
-> [telegram-monitor](https://github.com/canlgz/telegram-monitor)。意識 Bot 已有可運作的程式，
+> [ConsciousnessBot](https://github.com/canlgz/ConsciousnessBot)。意識 Bot 已有可運作的程式，
 > 目前仍持續與 AI 協作演進；本文只描述已能從原始碼與文件確認的功能。
 
 ## 先說結論：不是單純的新舊版本
@@ -23,7 +23,7 @@ LearningBot 的核心是「把散落的學習痕跡收住」；WriteToLearn 的�
 
 ## 1. 設計目的與使用者承諾
 
-| 面向 | LearningBot / backupBot | WriteToLearn | 意識 Bot（telegram-monitor） |
+| 面向 | LearningBot / backupBot | WriteToLearn | 意識 Bot（ConsciousnessBot） |
 | --- | --- | --- | --- |
 | 解決的主要問題 | 訊息、檔案與課堂互動容易消失 | 已累積的紀錄難以看出意義、主題與改變 | 背景是否仍在運作、哪些主題卡在邊緣、使用者不易主動回看長期狀態 |
 | 對使用者的承諾 | 隨手傳，我幫你保存與取回 | 隨手寫，我幫你保留脈絡並長出歷程 | 不必一直主動查看；有值得留意的變化時，我會帶著來源與問題來找你 |
@@ -112,14 +112,14 @@ WriteToLearn 則偏向「**我先留下正在發生的事，稍後再回來理�
 
 ## 7. 意識 Bot：獨立、唯讀的背景觀察與反思夥伴
 
-[telegram-monitor](https://github.com/canlgz/telegram-monitor) 是一個獨立 Python 服務，不是
+[ConsciousnessBot](https://github.com/canlgz/ConsciousnessBot) 是一個獨立 Python 服務，不是
 WriteToLearn 裡的另一個指令模組。它以 Google service account **唯讀**讀取同一個 Drive
 記憶層；自己的去重與摘要狀態只寫在本機 `state.json`，不修改 LINE Bot 程式或共享 Drive。
 
 ```text
 WriteToLearn 的 Drive 記憶層
   → service account 唯讀讀取
-  → telegram-monitor：分析、時間判讀、閾值與去重
+  → ConsciousnessBot：分析、時間判讀、閾值與去重
   → Telegram 主動推播／雙向教練對話
 ```
 
