@@ -1,8 +1,7 @@
 # LearningBot、WriteToLearn 與 ConsciousnessBot：設計演變與邊界
 
 > 本文比較 LearningBot / backupBot、WriteToLearn 與
-> [ConsciousnessBot](https://github.com/canlgz/ConsciousnessBot)。意識 Bot 已有可運作的程式，
-> 目前仍持續與 AI 協作演進；本文只描述已能從原始碼與文件確認的功能。
+> [ConsciousnessBot](https://github.com/canlgz/ConsciousnessBot)。本文只描述目前公開原始碼與文件可確認的功能；細節可能隨後續版本調整。
 
 ## 先說結論：不是可互接的三段管線
 
@@ -147,7 +146,7 @@ WriteToLearn 的 Drive 記憶層
 尤其重要的是它保留明確邊界：可讀取記寫軌跡與情緒／反應的**登錄**，但不宣稱那些資料被 Bot
 「感受」，也不宣稱 Bot 具有意識。這使意識 Bot 成為反思設計與資料倫理可以被討論的實際案例。
 
-它仍在持續與 AI 協作發展，因此具體判準、人格語氣與互動方式會演進；但「唯讀、不改寫記憶層、
+它仍在持續維護中，因此具體判準、互動方式與表述可能演進；但「唯讀、不改寫記憶層、
 事實先於生成、拒絕虛構感受」是目前可辨認的結構性原則。
 
 ## 8. 一句話區分

@@ -3,6 +3,7 @@
 這是一份經過**去識別化處理的歷史快照**。LearningBot 後來曾命名為
 `backupBot`，也是 [WriteToLearn](https://github.com/canlgz/WriteToLearn) 的前身。
 本庫用於程式閱讀、課程討論與工具演進比較，**不是**可直接投入正式環境的 Bot。
+它也不是安裝 WriteToLearn 或 ConsciousnessBot 的前置條件。
 
 ## 為什麼建立這個資料庫？
 
