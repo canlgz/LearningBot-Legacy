@@ -11,12 +11,18 @@ function requiredProperty_(name) {
   return value;
 }
 
-var notify_CHANNEL_ACCESS_TOKEN = requiredProperty_('LINE_NOTIFY_TOKEN');
+function optionalProperty_(name) {
+  return PropertiesService.getScriptProperties().getProperty(name) || '';
+}
+
+// LINE Notify was part of the historical implementation. It is optional here
+// so the core LINE Messaging API workflow can be studied without it.
+var notify_CHANNEL_ACCESS_TOKEN = optionalProperty_('LINE_NOTIFY_TOKEN');
 var learnBot_CHANNEL_ACCESS_TOKEN = requiredProperty_('LINE_CHANNEL_ACCESS_TOKEN');
 var destinationFolderID = requiredProperty_('DESTINATION_FOLDER_ID');
 var learningBotCenter_id = requiredProperty_('LEARNING_CENTER_SHEET_NAME');
 var administrator_id = requiredProperty_('ADMINISTRATOR_LINE_USER_ID');
-var defaultThumbnailFileId = requiredProperty_('DEFAULT_THUMBNAIL_FILE_ID');
+var defaultThumbnailFileId = optionalProperty_('DEFAULT_THUMBNAIL_FILE_ID');
 
 
 var logsheetname;

@@ -693,6 +693,10 @@ function wait_info(){
 }
 
 function learningBotSys_notify(str){
+  if (!notify_CHANNEL_ACCESS_TOKEN) {
+    console.log('LINE Notify is not configured; skipped historical notification.');
+    return 0;
+  }
    str="\n📺"+str
   var response=UrlFetchApp.fetch('https://notify-api.line.me/api/notify', {
     'headers': {
@@ -721,6 +725,10 @@ function learningBotSys_notify(str){
 
 
 function learningBot_notify(result){
+  if (!notify_CHANNEL_ACCESS_TOKEN) {
+    console.log('LINE Notify is not configured; skipped historical notification.');
+    return 0;
+  }
   
  str="已有"+getPushNum()+"次。"
   
@@ -1021,5 +1029,4 @@ function getFileDatas(learnBot_CHANNEL_ACCESS_TOKEN, fileID){
 
 
   }
-
 

@@ -13,6 +13,7 @@ Google Drive, then let learners browse, search, and retrieve their records by
 LINE menus and Flex Message carousels.
 
 Read [the evolution guide](docs/EVOLUTION.md) before opening the source.
+For a classroom sandbox, follow the [detailed installation guide](docs/INSTALL.md).
 
 ## Important safety note
 
@@ -52,4 +53,3 @@ installation of WriteToLearn, see the separate
 
 Copyright © Guanze Liao. This repository preserves a historical project for
 educational comparison. Please retain attribution when reusing excerpts.
-

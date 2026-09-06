@@ -7,13 +7,12 @@ Drive. Never place these values in a `.js` file or commit them to Git.
 | Key | Value to provide |
 | --- | --- |
 | `LINE_CHANNEL_ACCESS_TOKEN` | A Messaging API channel access token for your own channel |
-| `LINE_NOTIFY_TOKEN` | Historical optional setting used by the original notification code; do not rely on LINE Notify for a new build |
+| `LINE_NOTIFY_TOKEN` | Optional historical setting. Leave it unset for classroom use; the reminder/notification paths will log and skip. |
 | `DESTINATION_FOLDER_ID` | Google Drive folder ID that will store uploads |
 | `LEARNING_CENTER_SHEET_NAME` | Worksheet name used as the learning centre |
 | `ADMINISTRATOR_LINE_USER_ID` | LINE user ID allowed to run administrator commands |
-| `DEFAULT_THUMBNAIL_FILE_ID` | A Drive image file ID used as a fallback thumbnail |
+| `DEFAULT_THUMBNAIL_FILE_ID` | Optional Drive image file ID used as a fallback thumbnail |
 
 The active spreadsheet is intentionally obtained with
 `SpreadsheetApp.getActiveSpreadsheet()`: this source is a **bound script** for
 the spreadsheet used by the bot.
-

@@ -66,6 +66,10 @@ function findTriggerId(myTriggerId){
 
 
 function show_memory(param){
+  if (!notify_CHANNEL_ACCESS_TOKEN) {
+    console.log('LINE Notify is not configured; skipped historical reminder.');
+    return;
+  }
   var active_id=param.triggerUid
   var sheets = SpreadSheet.getSheets();
   var  triTime = new Date();
