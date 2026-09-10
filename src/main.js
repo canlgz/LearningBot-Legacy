@@ -200,13 +200,16 @@ function doPost(e) {
     
     var reply_mes_content;
     var command_str='';
+    var hasReplied=false;
     switch(reply_mes_type)
     {
       case 'text': 
         reply_mes_content=eventsth.message.text;
         var command_str=reply_mes_content.slice(0, 4);
 
-         checkJumppage(logsheetname,reply_token,reply_mes_content)
+         if (checkJumppage(logsheetname,reply_token,reply_mes_content)){
+           return ContentService.createTextOutput("OK");
+         }
 
         break;
       case 'image':
@@ -550,7 +553,7 @@ function doPost(e) {
               }
               
               end_row=broadCast_strat_row;
-              broadCast_summary(logsheetname,end_row,reply_token);
+              return broadCast_summary(logsheetname,end_row,reply_token);
               
               break;
               
@@ -570,7 +573,7 @@ function doPost(e) {
               gid=parseInt(temp.slice(0,temp.indexOf("#")))
               broadCast_id=SpreadSheet.getSheets()[gid-1].getName()
                
-               sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token);
+               return sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token);
                
                break;
               
@@ -601,7 +604,7 @@ function doPost(e) {
         writetoSheet(logsheetname,w,useridI_cNum, user_id);
         writetoSheet(logsheetname,w,nicknameI_cNum, nickname);
         reply_mode=1
-        reply_message(logsheetname,host_id,user_id,monitorTime,reply_token, reply_mode,myValue);
+        return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token, reply_mode,myValue);
       } //if (nickname==='(unknow)')
       
     } else if  (reply_mes_type != "text") { 
@@ -636,6 +639,7 @@ function doPost(e) {
           
           str.push(s3)
           short_reply(reply_token,str)
+          hasReplied=true;
         }
         
         newUploadFolder_id=readSheettoValue(logsheetname,uploadFolder_rNum,host_cNum);
@@ -668,12 +672,12 @@ function doPost(e) {
     } // if  (reply_mes_type != "text") {
     
     var myclass=onClass()
-    if (myclass!="課堂進行中"){
+    if (!hasReplied && myclass!="課堂進行中"){
       reply_mode=2
       return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,myclass);
     }else{
       count=parseInt(readSheettoValue(logsheetname,dataCount_rNum,1))
-      if (count % 100 ===0){
+      if (!hasReplied && count % 100 ===0){
         reply_mode=2
         str="資料累計第"+count+"則"
         return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,str);
@@ -688,8 +692,8 @@ function doPost(e) {
 }
 
 function checkJumppage(logsheetname,reply_token,reply_mes_content){
-  str=readSheettoValue(logsheetname,1,1)
-  if (str==""){return}
+  var str=readSheettoValue(logsheetname,1,1)
+  if (str===""){return false;}
   var array = str.split(",");
   var num1=parseInt(array[0])
   var where=array[1]
@@ -700,16 +704,13 @@ function checkJumppage(logsheetname,reply_token,reply_mes_content){
     
     writetoSheet(logsheetname,1,1,"")
     carouselInfobyPage(reply_token,num1,where)
-    exit;
+    return true;
   }else{
-     writetoSheet(logsheetname,1,1,"")
+    writetoSheet(logsheetname,1,1,"")
     carouselInfobySearch(reply_token,where,reply_mes_content)
-    exit;
-   
+    return true;
   }
-
-
-  }
+}
 
 function wait_info(targetId){
   return learningBotSys_notify("稍待..", targetId)

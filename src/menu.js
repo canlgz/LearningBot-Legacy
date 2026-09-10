@@ -686,7 +686,7 @@ function retriveFile(logsheetname,dataRow,reply_token){
   
   var options = {
     'headers': header,
-    'method': 'get',
+    'method': 'post',
     'payload': JSON.stringify(payload),
     'muteHttpExceptions':true
   }

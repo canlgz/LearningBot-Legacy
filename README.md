@@ -10,9 +10,9 @@
 
 ## 目前公開版本
 
-公開程式已同步至原始 Apps Script 的**第 287 版**。這次更新補上 webhook 對空白、非訊息與
-無效 JSON 請求的防護，並把一般系統通知改由 LINE Messaging API 推送；原始專案中的憑證與
-識別資料仍一律改為 Script Properties，不會上傳。
+公開程式已同步至原始 Apps Script 的**第 288 版**。近期更新補上 webhook 對空白、非訊息與
+無效 JSON 請求的防護，避免同一事件重複回覆，並把一般系統通知改由 LINE Messaging API 推送；
+原始專案中的憑證與識別資料仍一律改為 Script Properties，不會上傳。
 
 ## 為什麼建立這個資料庫？
 
