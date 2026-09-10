@@ -8,6 +8,12 @@
 落實；**不是**可直接投入正式環境的 Bot。
 它也不是安裝 WriteToLearn 或 ConsciousnessBot 的前置條件。
 
+## 目前公開版本
+
+公開程式已同步至原始 Apps Script 的**第 287 版**。這次更新補上 webhook 對空白、非訊息與
+無效 JSON 請求的防護，並把一般系統通知改由 LINE Messaging API 推送；原始專案中的憑證與
+識別資料仍一律改為 Script Properties，不會上傳。
+
 ## 為什麼建立這個資料庫？
 
 LearningBot 以 LINE 作為個人學習檔案庫的入口：接收訊息與檔案、將資料存入綁定的

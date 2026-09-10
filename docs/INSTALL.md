@@ -60,7 +60,7 @@ Script**」，再手動複製 `src/` 的所有檔案。
 | `LEARNING_CENTER_SHEET_NAME` | `Learning Center` |
 | `ADMINISTRATOR_LINE_USER_ID` | 初次測試可填任意非空白文字；第一位私訊使用者會成為該工作表的主持人 |
 | `DEFAULT_THUMBNAIL_FILE_ID` | 選填；可留白以使用程式內的備用縮圖 |
-| `LINE_NOTIFY_TOKEN` | 留白；歷史提醒／通知路徑會安全略過。 |
+| `LINE_NOTIFY_TOKEN` | 選填；一般安裝可留白。僅保留給舊式排程提醒程式使用。 |
 
 第一次執行時，Apps Script 會要求試算表、Drive 與外部請求權限。請確認是在自己的測試專案中
 才授權。
@@ -104,14 +104,14 @@ Script**」，再手動複製 `src/` 的所有檔案。
 | 出現 `Missing Script Property` | 必填屬性遺漏或拼字不同 | 逐字核對第 3 步的屬性名稱。 |
 | 第一則訊息未建立工作表 | 缺少 `templet` 或 Drive 權限有誤 | 確認工作表名稱完全是 `templet`，以及資料夾 ID 正確。 |
 | 試算表有資料但 LINE 未回覆 | LINE token 無效或已過期 | 在 LINE Developers 重新產生 token，只更新指令碼屬性。 |
-| 提醒沒有作用 | 未設定 LINE Notify | 這是課堂沙盒的預期行為；可討論如何改為現代 Messaging API push。 |
+| 舊式排程提醒沒有作用 | 未設定 LINE Notify | 這是課堂沙盒的預期行為。一般訊息與管理通知在第 287 版已改用 Messaging API push。 |
 | 無法建立部署 | 舊專案版本數過多 | 新建的學生沙盒通常不會發生；不可為了課堂練習去刪原始封存專案版本。 |
 
 ## 歷史限制
 
 - 此原始碼早於目前的安全與維護慣例，尤其未實作 LINE webhook 簽章驗證。
 - 某些 Drive 與 LINE 行為已隨服務演進而改變。
-- 原始提醒功能使用 LINE Notify，本教學版保留其歷史脈絡，但預設不啟用。
+- 舊式排程提醒仍使用 LINE Notify；一般訊息與管理通知已在第 287 版改用 LINE Messaging API push。
 - 沙盒中不可使用學生身分或真實學習紀錄。
 
 若要安裝目前維護中的版本，請改用

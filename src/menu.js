@@ -292,7 +292,7 @@ function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token){
   
   var options = {
     'headers': header,
-    'method': 'get',
+    'method': 'post',
     'payload': JSON.stringify(payload),
     'muteHttpExceptions':true
   }
@@ -399,7 +399,7 @@ function confirm_broadCast(reply_token,myValue,temp2){
   UrlFetchApp.fetch(line_reply_url , options);
 }
 
-function  browsing_flexing(sheetIndex,reply_token){
+function  browsing_flexing(sheetIndex,reply_token,targetId){
   q=["留言彙整如下："]
   var all=plainMsg(q)
   var sheets = SpreadSheet.getSheets();
@@ -420,7 +420,7 @@ function  browsing_flexing(sheetIndex,reply_token){
   var id_temp=readSheettoValue(th_logsheetnam,trigger_rNum,trigger_cNum)
   var sheet_th_lastRow=sheets[shth].getLastRow()
   var roomNameLable=readSheettoValue(th_logsheetnam,roomNameLable_rNum,host_cNum)
-  learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable)
+  learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable, targetId)
   var dataCount=readSheettoValue(th_logsheetnam,dataCount_rNum,host_cNum)
   var showNum=3
   
@@ -503,7 +503,7 @@ function  browsing_flexing(sheetIndex,reply_token){
     bubble_num= ori.contents.contents.length
     
     if (bubble_num>=10){
-      learningBotSys_notify("超過10頁。")
+      learningBotSys_notify("超過10頁。", targetId)
       i=0;
     }else{
       ori.contents.contents.push(th)
@@ -697,7 +697,7 @@ function retriveFile(logsheetname,dataRow,reply_token){
 }
 
 
-function broadCast_flexing(memo_option){
+function broadCast_flexing(memo_option, targetId){
   
   var sheets = SpreadSheet.getSheets();
   var all=[]
@@ -724,7 +724,7 @@ function broadCast_flexing(memo_option){
     var sheetId=sheets[i].getSheetId()
     var sheet_th_lastRow=sheets[i].getLastRow()
     var roomNameLable=readSheettoValue(th_logsheetnam,roomNameLable_rNum,host_cNum)
-    learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable)
+    learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable, targetId)
     var dataCount=readSheettoValue(th_logsheetnam,dataCount_rNum,host_cNum)
     var showNum=2
     //if (showNum>dataCount){showNum=dataCount}
@@ -820,7 +820,7 @@ function broadCast_flexing(memo_option){
     
     bubble_num= ori.contents.contents.length
     if (bubble_num>=10){
-      learningBotSys_notify("檔案夾超過10個。")
+      learningBotSys_notify("檔案夾超過10個。", targetId)
       var i=sheets.length;
     }else{
       ori.contents.contents.push(th)
@@ -838,7 +838,7 @@ function broadCast_flexing(memo_option){
   
 }
 
-function fileList_detailed(mode){
+function fileList_detailed(mode, targetId){
   myValue=""
   var sheets = SpreadSheet.getSheets();
   
@@ -857,7 +857,7 @@ function fileList_detailed(mode){
     var monitorTime=readSheettoValue(sheets[i].getName(),monitorTime_rNum,host_cNum);
     var dataCount=readSheettoValue(sheets[i].getName(),dataCount_rNum,host_cNum);
     var userNums=rowOf(sheets[i].getName(),useridI_cNum);
-    learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable);
+    learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable, targetId);
     var timeStamp=readSheettoValue(sheets[i].getName(),sheets[i].getLastRow(),time_cNum)
     var d_type=readSheettoValue(sheets[i].getName(),sheets[i].getLastRow(),type_cNum)
     var d_content=readSheettoValue(sheets[i].getName(),sheets[i].getLastRow(),replyContent_cNum)

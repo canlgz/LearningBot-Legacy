@@ -6,7 +6,7 @@
 | 鍵 | 要填入的值 |
 | --- | --- |
 | `LINE_CHANNEL_ACCESS_TOKEN` | 自己 LINE Messaging API Channel 的 access token |
-| `LINE_NOTIFY_TOKEN` | 歷史相容用的選填項目。課堂沙盒可留空；提醒／通知程式會記錄並略過。 |
+| `LINE_NOTIFY_TOKEN` | 選填；只供舊式排程提醒程式使用。一般訊息與管理通知在第 287 版已改用 LINE Messaging API。 |
 | `DESTINATION_FOLDER_ID` | 儲存上傳檔案的 Google Drive 資料夾 ID |
 | `LEARNING_CENTER_SHEET_NAME` | 作為學習中心的工作表名稱 |
 | `ADMINISTRATOR_LINE_USER_ID` | 可執行管理指令的 LINE 使用者 ID |

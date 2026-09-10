@@ -1,7 +1,22 @@
 var GoogleDrive = DriveApp;
 
 function doPost(e) { 
-  var userData = JSON.parse(e.postData.contents); 
+  if (!e || !e.postData || !e.postData.contents) {
+    return ContentService.createTextOutput("OK");
+  }
+
+  var userData;
+  try {
+    userData = JSON.parse(e.postData.contents);
+  } catch (error) {
+    console.error(error);
+    return ContentService.createTextOutput("OK");
+  }
+
+  if (!userData || !Array.isArray(userData.events) || userData.events.length === 0) {
+    return ContentService.createTextOutput("OK");
+  }
+
   var myeventsth = userData.events[0];
   var events_type=myeventsth.type;
   if (events_type==="postback"){
@@ -146,14 +161,21 @@ function doPost(e) {
         
     }
   }
-  
-  
+  // Postback events have no `message` object. Their actions were handled above.
+  if (events_type === "postback") {
+    return ContentService.createTextOutput("OK");
+  }
+
   var eventsNum = userData.events.length
   
   
   for (k=0;k<eventsNum;k++){
     var writeSheetData=[];
     var eventsth = userData.events[k];
+    // Ignore non-message events such as follow, unfollow, join, and leave.
+    if (!eventsth || !eventsth.message) {
+      continue;
+    }
     var reply_token = eventsth.replyToken;
     var user_id = eventsth.source.userId;
     var events_message= eventsth.message;
@@ -376,10 +398,10 @@ function doPost(e) {
             case "//轉訊":
               
               if (user_id===administrator_id){
-                wait_info()
+                wait_info(logsheetname)
                 
                 mode=0
-                str=fileList_detailed(mode) //蒐集所有檔案夾資訊, mode=0=簡化,1=細節
+                str=fileList_detailed(mode, logsheetname) //蒐集所有檔案夾資訊, mode=0=簡化,1=細節
                 reply_mode=4
                 return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,str)
                 
@@ -434,10 +456,10 @@ function doPost(e) {
             case "//系統":
               
               if (user_id===administrator_id){      
-                wait_info()
+                wait_info(logsheetname)
                 reply_mode=3
                 mode=1
-                str=fileList_detailed(mode) // //蒐集所有檔案夾資訊, mode=0=簡化,1=細節, 2=廣播使用
+                str=fileList_detailed(mode, logsheetname) // //蒐集所有檔案夾資訊, mode=0=簡化,1=細節, 2=廣播使用
                 return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,str)
                 
               }else{
@@ -629,7 +651,7 @@ function doPost(e) {
         SpreadSheet.getSheetByName(logsheetname).appendRow(writeSheetData);
         
         if (readSheettoValue(logsheetname,broadCast_strart_rNum,host_cNum)!="--"){
-          learningBotSys_notify("1 file uploaded.\n"+"("+GoogleDriveFileName+")")
+          learningBotSys_notify("1 file uploaded.\n"+"("+GoogleDriveFileName+")", logsheetname)
         };
         
         count=parseInt(readSheettoValue(logsheetname,dataCount_rNum,1))
@@ -661,7 +683,8 @@ function doPost(e) {
   
   
   }//for
-  
+
+  return ContentService.createTextOutput("OK");
 }
 
 function checkJumppage(logsheetname,reply_token,reply_mes_content){
@@ -688,73 +711,44 @@ function checkJumppage(logsheetname,reply_token,reply_mes_content){
 
   }
 
-function wait_info(){
-  learningBotSys_notify("稍待..")
+function wait_info(targetId){
+  return learningBotSys_notify("稍待..", targetId)
 }
 
-function learningBotSys_notify(str){
-  if (!notify_CHANNEL_ACCESS_TOKEN) {
-    console.log('LINE Notify is not configured; skipped historical notification.');
-    return 0;
-  }
-   str="\n📺"+str
-  var response=UrlFetchApp.fetch('https://notify-api.line.me/api/notify', {
-    'headers': {
-      'Authorization': 'Bearer ' + notify_CHANNEL_ACCESS_TOKEN,
-    },
+function learningBotSys_notify(str, targetId){
+  var header = {
+    'Content-Type': 'application/json; charset=UTF-8',
+    'Authorization': 'Bearer ' + learnBot_CHANNEL_ACCESS_TOKEN,
+  };
+
+  var payload = {
+    'to': targetId || administrator_id,
+    'messages': ProcMsg('text', '', '📺' + str)
+  };
+
+  var response = UrlFetchApp.fetch(line_push_url, {
+    'headers': header,
     'method': 'post',
-    'payload': {
-      'message':(str)
-      
-    },
-    'muteHttpExceptions':true
+    'payload': JSON.stringify(payload),
+    'muteHttpExceptions': true
   });
-  
-  var result=response.getContentText()
-  
-  if (JSON.parse(result).message==="ok"){
-    return(1)
-  }else{
-    
-    return(2)
-  }
-  
-  
+
+  return response.getResponseCode() === 200 ? 1 : 2;
 }
 
 
 
 function learningBot_notify(result){
-  if (!notify_CHANNEL_ACCESS_TOKEN) {
-    console.log('LINE Notify is not configured; skipped historical notification.');
-    return 0;
+  var detail;
+  try {
+    detail = JSON.parse(result).message || result;
+  } catch (error) {
+    detail = result;
   }
-  
- str="已有"+getPushNum()+"次。"
-  
-  mess = "\n 💔無法即時轉訊💔"+"\n 系統回覆➤"+JSON.parse(result).message+"\n 轉訊次數➤"+str
-  
-  
-  var response=UrlFetchApp.fetch('https://notify-api.line.me/api/notify', {
-    'headers': {
-      'Authorization': 'Bearer ' + notify_CHANNEL_ACCESS_TOKEN,
-    },
-    'method': 'post',
-    'payload': {
-      'message':mess,
-     },
-    'muteHttpExceptions':true
-  });
-  
-  var result=response.getContentText()
-  
-  if (JSON.parse(result).message==="ok"){
-    return(1)
-  }else{
-    
-    return(2)
-  }
-  
+
+  return learningBotSys_notify(
+    '💔無法即時轉訊💔\n系統回覆➤' + detail + '\n轉訊次數➤已有' + getPushNum() + '次。'
+  );
 }
 
 function short_reply(reply_token,myValue){
@@ -832,7 +826,7 @@ function reply_message(mylogsheetname,host_id,user_id,monitorTime,reply_token,re
       //memo_option=["各群組最近留言彙整如下⬇️","請選擇👉🏻在哪廣播?"]; //放置提示語，最多四句
       var payload = {
         'replyToken': reply_token,
-        'messages' : broadCast_flexing(plainMsg(memo_option)) 
+        'messages' : broadCast_flexing(plainMsg(memo_option), mylogsheetname)
       }
       break;
       
@@ -1029,4 +1023,3 @@ function getFileDatas(learnBot_CHANNEL_ACCESS_TOKEN, fileID){
 
 
   }
-
