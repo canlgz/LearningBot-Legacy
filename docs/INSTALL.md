@@ -14,13 +14,13 @@ LINE 使用者 → LINE Messaging API → GAS doPost(e)
              → 綁定試算表 + Drive 資料夾 → LINE 回覆／Flex Message
 ```
 
-## 1. 建立私人的測試試算表
+## 1. 建立私人的測試 Drive 資料夾
 
-1. 建立一份 Google 試算表，命名為 `LearningBot Sandbox`。
-2. 依照 [SHEET_TEMPLATE.md](SHEET_TEMPLATE.md) 建立工作表與控制列。
-3. 在 Google Drive 建立一個資料夾，例如 `LearningBot uploads`。
-4. 開啟該資料夾，複製網址中 `/folders/` 後的 ID；稍後填為
+1. 在 Google Drive 建立一個資料夾，例如 `LearningBot uploads`。
+2. 開啟該資料夾，複製網址中 `/folders/` 後的 ID；稍後填為
    `DESTINATION_FOLDER_ID`。這個值屬於私人設定。
+
+試算表會在第 3 節由 `clasp` 一次建立，避免模板建立在錯誤的試算表中。
 
 ## 2. 建立 LINE Messaging API Channel
 
@@ -44,12 +44,17 @@ npm install --global @google/clasp
 clasp login
 clasp create --type sheets --title "LearningBot Sandbox" --rootDir src
 clasp push
-clasp open
+clasp open-script
 ```
 
-`clasp create --type sheets` 會建立**新的**試算表並將 Apps Script 綁定到它。若你在步驟 1
-已建立試算表，請將模板工作表複製到這份新沙盒試算表；或改從試算表點選「**擴充功能 → Apps
-Script**」，再手動複製 `src/` 的所有檔案。
+`clasp create --type sheets` 會建立**唯一一份** `LearningBot Sandbox` 試算表，並將 Apps
+Script 綁定到它。請開啟該指令輸出中的試算表連結，依照
+[SHEET_TEMPLATE.md](SHEET_TEMPLATE.md) 在這一份試算表建立 `templet`、`Triggers` 與
+`Learning Center` 工作表及其控制列。`templet` 的拼字與前八列的資料都不可省略；它是 Bot
+第一次收到 LINE 訊息時複製新對話工作表的依據。
+
+回到 Apps Script 編輯器，確認左側檔案清單已出現 `main.js`、`parameters.js` 與
+`appsscript.json`；若 `clasp push` 尚未成功，先不要往下設定 LINE webhook。
 
 在 Apps Script 編輯器開啟「**專案設定 → 指令碼屬性**」，新增以下值：
 
