@@ -1,0 +1,9 @@
+{
+  "name": "learningbot-legacy-student",
+  "private": true,
+  "version": "2026.9.14",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node tests/verify-recording.mjs && node tests/verify-broadcast.mjs && node tests/verify-forwarding.mjs && node tests/verify-installation.mjs && node tests/verify-public-source.mjs"
+  }
+}

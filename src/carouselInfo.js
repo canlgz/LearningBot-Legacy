@@ -1,9 +1,11 @@
 function carouselInfobySearch(reply_token,thlogsheetname,search_str,gopage){
+  thlogsheetname = botRequireChat_(thlogsheetname);
 
-  var carousel_sheet=SpreadSheet.getSheetByName(thlogsheetname)
-  var lastRow=carousel_sheet.getLastRow()
+  var carousel_sheet=botSheet_(thlogsheetname)
+  var lastRow=botLastContentRow_(carousel_sheet)
   var baseLine=9
-  var search_range = carousel_sheet.getRange(baseLine,7,lastRow,4)
+  if (lastRow < baseLine) return short_reply(reply_token,[`找不到：${search_str}️`]);
+  var search_range = carousel_sheet.getRange(baseLine,7,lastRow-baseLine+1,4)
   var search_result_list = search_range.createTextFinder(search_str).findAll()
   if (search_result_list.length!=0){
     /*var serList=[]
@@ -26,14 +28,17 @@ function carouselInfobySearch(reply_token,thlogsheetname,search_str,gopage){
 
 
 function carouselInfobyPage(reply_token,nowpage,thlogsheetname){
+  thlogsheetname = botRequireChat_(thlogsheetname);
   
-  var carousel_sheet=SpreadSheet.getSheetByName(thlogsheetname)
+  var carousel_sheet=botSheet_(thlogsheetname)
   var baseLine=9
   
   
-  var lastRow=carousel_sheet.getLastRow()
+  var lastRow=botLastContentRow_(carousel_sheet)
   
-  var itemC=12//parseInt(SpreadSheet.getSheetByName(thlogsheetname).getRange(9,1).getValue())
+  if (lastRow < 9) return short_reply(reply_token,['這個群組還沒有內容紀錄。']);
+  nowpage=Math.max(1,Math.min(Number(nowpage)||1,Math.ceil((lastRow-8)/12)));
+  var itemC=12//parseInt(botSheet_(thlogsheetname).getRange(9,1).getValue())
   
   var wholepage = Math.ceil((lastRow-(baseLine-1)) / itemC)
   
@@ -170,7 +175,7 @@ function carouselInfobyPage(reply_token,nowpage,thlogsheetname){
 }
 
 
-if (Itype!="text"){
+if (Itype!="text" && botFileReady_(carousel_sheet,Ith)){
   var regM={
     "type": "text",
     "contents": [
@@ -190,14 +195,16 @@ if (Itype!="text"){
           //"maxLines": 3,
           "size": "sm"
 }
-uniMess.body.contents.push({
-        "type": "image",
-        "url": getThumbnailURL(Ipara),
-        "margin": "none",
-        "size": "full",
-        //"backgroundColor": "#999999"
-      })
+if (botIsUpload_(Itype)) {
+  var thumbnail='';
+  try { thumbnail=getThumbnailURL(botStoredFile_(thlogsheetname,Ith).getId()); } catch (error) {}
+  if (typeof thumbnail==='string' && thumbnail.indexOf('https://')===0) {
+    uniMess.body.contents.push({type:'image',url:thumbnail,margin:'none',size:'full'});
+  }
+}
 uniMess.body.contents.push(regM)
+} else if (Itype && !botFileReady_(carousel_sheet,Ith)) {
+  uniMess.body.contents.push({type:'text',text:String(carousel_sheet.getRange(Ith,13).getValue()),wrap:true,color:'#990000'});
 }
 
 ori.contents.contents.push(uniMess)
@@ -459,7 +466,7 @@ UrlFetchApp.fetch(line_reply_url , options);
 }
 
 function getInterest(Ititle){
-  var userlist_sheet=SpreadSheet.getSheetByName("好友")
+  var userlist_sheet=botSheet_("好友")
   var lastRow=userlist_sheet.getLastRow()
   var lastColum=userlist_sheet.getLastColumn()
   var myrange = userlist_sheet.getRange(1,5,1,lastColum-4)

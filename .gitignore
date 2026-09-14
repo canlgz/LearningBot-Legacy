@@ -1,4 +1,10 @@
 .clasp.json
 .clasprc.json
 *.log
-
+node_modules/
+.env
+.env.*
+!.env.example
+credentials*.json
+*.xlsx
+*.csv

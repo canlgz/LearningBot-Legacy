@@ -15,26 +15,24 @@ function optionalProperty_(name) {
   return PropertiesService.getScriptProperties().getProperty(name) || '';
 }
 
-// LINE Notify was part of the historical implementation. It is optional here
-// so the core LINE Messaging API workflow can be studied without it.
-var notify_CHANNEL_ACCESS_TOKEN = optionalProperty_('LINE_NOTIFY_TOKEN');
-var learnBot_CHANNEL_ACCESS_TOKEN = requiredProperty_('LINE_CHANNEL_ACCESS_TOKEN');
-var destinationFolderID = requiredProperty_('DESTINATION_FOLDER_ID');
-var learningBotCenter_id = requiredProperty_('LEARNING_CENTER_SHEET_NAME');
-var administrator_id = requiredProperty_('ADMINISTRATOR_LINE_USER_ID');
+// Do not throw at load time: initializeBot must be runnable in a new project.
+var learnBot_CHANNEL_ACCESS_TOKEN = optionalProperty_('LINE_CHANNEL_ACCESS_TOKEN');
+var destinationFolderID = optionalProperty_('DESTINATION_FOLDER_ID');
+var administrator_id = optionalProperty_('ADMINISTRATOR_LINE_USER_ID');
+var learningBotCenter_id = optionalProperty_('LEARNING_CENTER_CHAT_ID') || administrator_id;
 var defaultThumbnailFileId = optionalProperty_('DEFAULT_THUMBNAIL_FILE_ID');
 
 
 var logsheetname;
 var line_reply_url = 'https://api.line.me/v2/bot/message/reply';
 var line_push_url = 'https://api.line.me/v2/bot/message/push';
-var line_notify_url="https://notify-api.line.me/api/notify"
 var line_profile_url = 'https://api.line.me/v2/profile';
 var events_message;
 var helper='備份';
 var helpIconurl="https://cdn.iconscout.com/icon/free/png-256/learning-95-1108404.png"
 var user;
 var SpreadSheet = SpreadsheetApp.getActiveSpreadsheet();
+if (!SpreadSheet && optionalProperty_('SPREADSHEET_ID')) SpreadSheet = SpreadsheetApp.openById(optionalProperty_('SPREADSHEET_ID'));
 var commandline=["//我是","//我叫","//廣播","//取名","//系統","//轉訊","//戳戳","//蒐集","//檢視","//取消","//傳送","//檔案","//瀏覽"];
 var host_cNum=1;
 var roomIcon=["⛺️","🏠","🏘","🏕","⛰","⛩","🛕","🕍","🕌","🕋"]

@@ -1,31 +1,10 @@
-function dss(){
-  var carousel_sheet=SpreadSheet.getSheetByName(learningBotCenter_id)
-  var lastRow=carousel_sheet.getLastRow()
-  var baseLine=9
-  var search_range = carousel_sheet.getRange(baseLine,7,lastRow,4)
-  var oo = search_range.createTextFinder('檔案').findAll()
-
-  var pp=[]
-
-  for (i=0;i<oo.length;i++){
-t=[]
-t.push(oo[i].getRow())
-t.push(oo[i].getColumn())
-pp.push(t)
-
-  }
-  //var pp=[oo]
-var d=JSON.stringify({'id':8,'thpage':2,'thsheet':'ddd','serStr':'ede','serList':pp})
-eed=JSON.parse(d).serList
-Logger.log(d)
-Logger.log(eed[2])
-Logger.log(eed.length)
-}
+function dss() { throw new Error("Historical demo disabled; use the bot menu."); }
 
 function show_searchResult(reply_token,thlogsheetname,search_str,search_result_list,nowpage){
+  thlogsheetname = botRequireChat_(thlogsheetname);
  
 
-  var carousel_sheet=SpreadSheet.getSheetByName(thlogsheetname)
+  var carousel_sheet=botSheet_(thlogsheetname)
   var baseLine=1
   
   
@@ -168,7 +147,7 @@ function show_searchResult(reply_token,thlogsheetname,search_str,search_result_l
 }
 
 
-if (Itype!="text"){
+if (Itype!="text" && botFileReady_(carousel_sheet,rowIth)){
   var regM={
     "type": "text",
     "contents": [
@@ -188,14 +167,16 @@ if (Itype!="text"){
           //"maxLines": 3,
           "size": "sm"
 }
-uniMess.body.contents.push({
-        "type": "image",
-        "url": getThumbnailURL(Ipara),
-        "margin": "none",
-        "size": "full",
-        //"backgroundColor": "#999999"
-      })
+if (botIsUpload_(Itype)) {
+  var thumbnail='';
+  try { thumbnail=getThumbnailURL(botStoredFile_(thlogsheetname,rowIth).getId()); } catch (error) {}
+  if (typeof thumbnail==='string' && thumbnail.indexOf('https://')===0) {
+    uniMess.body.contents.push({type:'image',url:thumbnail,margin:'none',size:'full'});
+  }
+}
 uniMess.body.contents.push(regM)
+} else if (Itype && !botFileReady_(carousel_sheet,rowIth)) {
+  uniMess.body.contents.push({type:'text',text:String(carousel_sheet.getRange(rowIth,13).getValue()),wrap:true,color:'#990000'});
 }
 
 ori.contents.contents.push(uniMess)

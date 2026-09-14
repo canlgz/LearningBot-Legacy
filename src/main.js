@@ -1,6 +1,6 @@
 var GoogleDrive = DriveApp;
 
-function doPost(e) { 
+function botHandleEvent_(e) {
   if (!e || !e.postData || !e.postData.contents) {
     return ContentService.createTextOutput("OK");
   }
@@ -20,6 +20,9 @@ function doPost(e) {
   var myeventsth = userData.events[0];
   var events_type=myeventsth.type;
   if (events_type==="postback"){
+    var postbackSource = myeventsth.source || {};
+    var postbackChat = postbackSource.groupId || postbackSource.roomId || postbackSource.userId;
+    if (postbackChat) checkSheetExist(postbackChat, postbackSource.userId);
     var myDataa=JSON.parse(myeventsth.postback.data)
     var myid=parseInt(myDataa.id)
     var reply_token=myeventsth.replyToken
@@ -27,7 +30,7 @@ function doPost(e) {
       case 1:
         var sheetIndex= parseInt(myDataa.sheetIndex)
         
-        carouselInfobyPage(reply_token,1,SpreadSheet.getSheets()[sheetIndex-1].getName())
+        carouselInfobyPage(reply_token,1,botCallbackChat_(myDataa, sheetIndex-1))
         //browsing_flexing(sheetIndex,reply_token)
         break;
       case 2:
@@ -40,10 +43,12 @@ function doPost(e) {
         
         
       case 3:
+        if (postbackSource.userId !== administrator_id) return short_reply(reply_token,['你無權限設定轉訊模式']);
+        botSetOperation_(postbackChat,postbackSource.userId,'input',null);
         var sheets = SpreadSheet.getSheets();
         var sheetIndex= parseInt(myDataa.i);
         
-        var mysheetName=sheets[sheetIndex].getName();
+        var mysheetName=botCallbackChat_(myDataa, sheetIndex);
         var mymonitorTime=parseInt(myDataa.m);
         var myroomLable=readSheettoValue(mysheetName,roomNameLable_rNum,host_cNum);
          
@@ -106,13 +111,13 @@ function doPost(e) {
         
          if (tpage==-1){
            var wholepage=parseInt(myDataa.wholepage);
-           writetoSheet(logsheetname,1,1,`${wholepage}️,${thlogsheetname}`)
+           botSetOperation_(logsheetname, postbackSource.userId, 'input', {kind:'page', pages:wholepage, target:thlogsheetname})
            short_reply(reply_token,["輸入頁碼？"]);
          }else if (tpage==-2){
-           writetoSheet(logsheetname,1,1,`-1,${thlogsheetname}`)
+           botSetOperation_(logsheetname, postbackSource.userId, 'input', {kind:'search', target:thlogsheetname})
            short_reply(reply_token,["輸入搜尋字串？"]);
          }else{
-           writetoSheet(logsheetname,1,1,"")
+           botSetOperation_(logsheetname, postbackSource.userId, 'input', null)
            return carouselInfobyPage(reply_token,tpage,thlogsheetname)
          }
 
@@ -144,10 +149,10 @@ function doPost(e) {
         serStr=myDataa.serStr
          if (tpage==-1){
            var wholepage=parseInt(myDataa.wholepage);
-           writetoSheet(logsheetname,1,1,`${wholepage}️,${thlogsheetname}`)
+           botSetOperation_(logsheetname, postbackSource.userId, 'input', {kind:'page', pages:wholepage, target:thlogsheetname, search:serStr})
            short_reply(reply_token,["輸入頁碼？"]);
          }else{
-           writetoSheet(logsheetname,1,1,"")
+           botSetOperation_(logsheetname, postbackSource.userId, 'input', null)
            //return show_searchResult(reply_token,2,thlogsheetname,serStr)
            return carouselInfobySearch(reply_token,thlogsheetname,serStr,tpage)
          }
@@ -161,6 +166,7 @@ function doPost(e) {
         
     }
   }
+
   // Postback events have no `message` object. Their actions were handled above.
   if (events_type === "postback") {
     return ContentService.createTextOutput("OK");
@@ -169,7 +175,7 @@ function doPost(e) {
   var eventsNum = userData.events.length
   
   
-  for (k=0;k<eventsNum;k++){
+  for (var k=0;k<eventsNum;k++){
     var writeSheetData=[];
     var eventsth = userData.events[k];
     // Ignore non-message events such as follow, unfollow, join, and leave.
@@ -177,7 +183,7 @@ function doPost(e) {
       continue;
     }
     var reply_token = eventsth.replyToken;
-    var user_id = eventsth.source.userId;
+    var user_id = eventsth.source.userId || '';
     var events_message= eventsth.message;
     var reply_mes_type = events_message.type;
     
@@ -201,13 +207,17 @@ function doPost(e) {
     var reply_mes_content;
     var command_str='';
     var hasReplied=false;
+    var operationKind='';
+    var recorded=null;
     switch(reply_mes_type)
     {
       case 'text': 
         reply_mes_content=eventsth.message.text;
-        var command_str=reply_mes_content.slice(0, 4);
+        operationKind=botCommandKind_(logsheetname,user_id,reply_mes_content);
+        var command_str=reply_mes_content.trim().slice(0, 4);
+        if (operationKind) reply_mes_content=reply_mes_content.trim();
 
-         if (checkJumppage(logsheetname,reply_token,reply_mes_content)){
+         if (checkJumppage(logsheetname,reply_token,reply_mes_content,user_id)){
            return ContentService.createTextOutput("OK");
          }
 
@@ -242,14 +252,14 @@ function doPost(e) {
     
     var nickname=findname(logsheetname,user_id);
     if (nickname===""){
-      var  nickname=getUsername(user_id);
+      var nickname=botSafeUsername_(user_id);
      // grapGhost(logsheetname,nickname,user_id)
       w=rowOf(logsheetname,useridI_cNum);
       writetoSheet(logsheetname,w+1,useridI_cNum, user_id);
       writetoSheet(logsheetname,w+1,nicknameI_cNum, nickname);
     }else if (nickname==="(未設定)"){
       
-      temp= getUsername(user_id);
+      temp=botSafeUsername_(user_id);
       //grapGhost(logsheetname,temp,user_id)
       
       if (temp!="(未加入好友)"){
@@ -273,36 +283,30 @@ function doPost(e) {
     
     
     
-    if (reply_mes_type==="text" | reply_mes_type==="sticker" | reply_mes_type==="location"){
-      if (reply_mes_type==="sticker" | reply_mes_type==="location"){
+    if (!operationKind) {
+      if (reply_mes_type === 'sticker' || reply_mes_type === 'location') {
         writeSheetData[paraContent_cNum-1]=JSON.stringify(events_message);
       }
-      
-      var res=tell_to_LearnBot(logsheetname,host_id,user_id,monitorTime,nickname,reply_mes_type,reply_mes_content,mes_timestamp)
-      
-      writeSheetData[sentMess_cNum-1]=res;
-      SpreadSheet.getSheetByName(logsheetname).appendRow(writeSheetData);
-      
-      count=parseInt(readSheettoValue(logsheetname,dataCount_rNum,1))
-      count++;
-      writetoSheet(logsheetname,dataCount_rNum,host_cNum, count)
-      
-      
-      
-    }else{
-      tell_to_LearnBot(logsheetname,host_id,user_id,monitorTime,nickname,reply_mes_type,reply_mes_content,mes_timestamp)
-      
-      
+      if (botIsUpload_(reply_mes_type)) writeSheetData[paraContent_cNum-1]='';
+      recorded=botAppendContent_(logsheetname,writeSheetData,eventsth);
+      if (recorded.duplicate) return ContentService.createTextOutput('OK');
+      // Commit content first. Forwarding failures must never erase the record.
+      if (!botIsUpload_(reply_mes_type)) {
+        var forwarded=0;
+        try {
+          forwarded=botForwardInteraction_(logsheetname,host_id,user_id,monitorTime,nickname,reply_mes_type,reply_mes_content,mes_timestamp,writeSheetData[paraContent_cNum-1]);
+        } catch (forwardError) { forwarded=2; console.error('Content recorded; forwarding failed.'); }
+        writetoSheet(logsheetname,recorded.row,sentMess_cNum,forwarded);
+      }
     }
-    
-    if (typeof reply_token === 'undefined'){
-      return;}
-    
-    
-    
-    
-   var broadCast_strat_row=SpreadSheet.getSheetByName(logsheetname).getLastRow();
-    
+    // A command can be excluded from the content archive while still notifying
+    // the administrator, as the original bot did (for example //我是...).
+    if (operationKind) {
+      botForwardInteraction_(logsheetname,host_id,user_id,monitorTime,nickname,reply_mes_type,reply_mes_content,mes_timestamp);
+    }
+    // Uploads must be persisted even when no reply token was supplied.
+    if (!reply_token && !botIsUpload_(reply_mes_type)) return ContentService.createTextOutput('OK');
+
     if  (reply_mes_type === "text") { 
       
       if (reply_mes_content.includes(helper)){
@@ -313,18 +317,22 @@ function doPost(e) {
       } //if (reply_mes_content.includes(helper)){
       
       
-      if (commandline.includes(command_str) | command_str.includes("#")){
+      if (operationKind && operationKind !== "help"){
         str="//轉訊"
         
-        if (command_str.includes("#")){  //&  confirm_previous_opr("//轉訊")
+        if (operationKind === "timing"){  //&  confirm_previous_opr("//轉訊")
           
           if (user_id===administrator_id){
             //wait_info()
-            if (confirm_previous_opr("//轉訊",logsheetname)){
+            if (confirm_previous_opr('//轉訊',logsheetname,user_id)){
               temp=reply_mes_content.slice(reply_mes_content.indexOf("#")+1,reply_mes_content.length);
               sheetIndex=parseInt(reply_mes_content.slice(0,reply_mes_content.indexOf("#")))
               
-              var logsheetname=SpreadSheet.getSheets()[sheetIndex-1].getName()
+              var timingOrigin=logsheetname;
+              var timingSheet=SpreadSheet.getSheets()[sheetIndex-1];
+              if (!timingSheet || !botChatId_(timingSheet)) return short_reply(reply_token,['找不到指定的群組。']);
+              botSetOperation_(timingOrigin,user_id,'input',null);
+              var logsheetname=botChatId_(timingSheet)
               
               roomLable=readSheettoValue(logsheetname,roomNameLable_rNum,host_cNum);
               monitorTime=parseInt(temp);
@@ -401,6 +409,7 @@ function doPost(e) {
             case "//轉訊":
               
               if (user_id===administrator_id){
+                botSetOperation_(logsheetname,user_id,'input',{kind:'timing'});
                 wait_info(logsheetname)
                 
                 mode=0
@@ -508,7 +517,7 @@ function doPost(e) {
               
              // np=1
               //writetoSheet(logsheetname,9,1, np);
-              return carouselInfo(reply_token,1,logsheetname)
+              return carouselInfobyPage(reply_token,1,logsheetname)
           
           
           break
@@ -530,61 +539,16 @@ function doPost(e) {
               break;
               
             case "//蒐集":
-              
-              temp=reply_mes_content.slice(reply_mes_content.indexOf("➡️")+1,reply_mes_content.length);
-              writetoSheet(logsheetname,broadCast_strart_rNum,host_cNum, broadCast_strat_row)
-              writetoSheet(logsheetname,broadCast_strart_rNum+1,host_cNum, "--")
-              reply_mode=5.1
-              
-              str="✏️一次廣播可同步送出最多五則訊息，透過"+helper+"機器人廣播給指定群組。"+"\n--------------\n"+"✏️廣播至"+temp.slice(0,temp.indexOf("#"))+"(💾="+temp.slice(temp.indexOf("#")+1, temp.length)+")"+"\n ➡️請開始輸入廣播訊息，完成後按下送出訊息。"
-              return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,str)
-              
-              
-              break;
-              
+              return botBeginBroadcast_(logsheetname,user_id,reply_mes_content,reply_token);
             case "//檢視":
-              temp=readSheettoValue(logsheetname,broadCast_strart_rNum,host_cNum);
-              if (temp==="--"){
-                myValue="沒有蒐集到廣播訊息"
-                reply_mode=2
-                
-                return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,myValue);
-                
-              }
-              
-              end_row=broadCast_strat_row;
-              return broadCast_summary(logsheetname,end_row,reply_token);
-              
-              break;
-              
+              return botPreviewBroadcast_(logsheetname,user_id,reply_token);
             case "//傳送":
-              temp=readSheettoValue(logsheetname,broadCast_strart_rNum+1,host_cNum);
-              if (temp==="--"){
-                myValue="沒有蒐集到廣播訊息"
-                reply_mode=2
-                
-                return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,myValue);
-                
-              }
-              writetoSheet(logsheetname,broadCast_strart_rNum+1,host_cNum, "--")
-              start_Row=parseInt(temp.slice(temp.indexOf("#")+1,temp.indexOf("-")))
-              end_Row=parseInt(temp.slice(temp.indexOf("-")+1,temp.length))
-               
-              gid=parseInt(temp.slice(0,temp.indexOf("#")))
-              broadCast_id=SpreadSheet.getSheets()[gid-1].getName()
-               
-               return sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token);
-               
-               break;
-              
-              
+              return botSendBroadcast_(logsheetname,user_id,reply_token);
             case "//取消":
-               writetoSheet(logsheetname,broadCast_strart_rNum,host_cNum, "--")
-               writetoSheet(logsheetname,broadCast_strart_rNum+1,host_cNum, "--")
-               str=["已取消廣播。"]
-               return short_reply(reply_token,str);
-              break;
-              
+              botSetOperation_(logsheetname,user_id,'broadcast',null);
+              botSetOperation_(logsheetname,user_id,'input',null);
+              return short_reply(reply_token,["已取消廣播。"]);
+
             case "//檔案":
               
               
@@ -607,70 +571,27 @@ function doPost(e) {
         return reply_message(logsheetname,host_id,user_id,monitorTime,reply_token, reply_mode,myValue);
       } //if (nickname==='(unknow)')
       
-    } else if  (reply_mes_type != "text") { 
-
-      if (reply_mes_type != "sticker" & reply_mes_type != "location"){
-        var fileID = userData.events[k].message.id;
-        var getFetchData=getFileDatas(learnBot_CHANNEL_ACCESS_TOKEN, fileID)
-        if (getFetchData==-1){
-           return short_reply(reply_token,["❌備份失敗，請稍後再試"]) 
-
-        }
-        var upload_files = GoogleDrive.createFile(getFetchData);
-        var fileExtension = upload_files.getName().split(".");
-        if (userData.events[k].message.type != "file") {
-          temp="";
-          if (reply_mes_type === "audio") {temp=audio_duration.toString()+"_"} 
-          var GoogleDriveFileName = temp+fileID + "." + fileExtension[fileExtension.length - 1];
-        
-        }
-        else {
-          var GoogleDriveFileName = userData.events[k].message.fileName;
-        }
-        
-        if (reply_mes_type==="file" | reply_mes_type==="image" | reply_mes_type==="audio"| reply_mes_type==="video"){
-          s1="已備份"+nickname+"上傳的檔案。"
-          
-          s3="("+GoogleDriveFileName+")"
-          
-          str=[]
-          
-          str.push(s1)
-          
-          str.push(s3)
-          short_reply(reply_token,str)
-          hasReplied=true;
-        }
-        
-        newUploadFolder_id=readSheettoValue(logsheetname,uploadFolder_rNum,host_cNum);
-        upload_files.makeCopy(GoogleDriveFileName, GoogleDrive.getFolderById(newUploadFolder_id));
-        dlURL = upload_files.getDownloadUrl();
-        uploadFileID= upload_files.getId()
-        writeSheetData[paraContent_cNum-1]=uploadFileID;
-        writeSheetData[replyContent_cNum-1]=GoogleDriveFileName;
-        GoogleDrive.removeFile(upload_files);
-        var res=send_file_to_LearnBot(monitorTime,user_id,reply_mes_type,GoogleDriveFileName);
-        
-        writeSheetData[sentMess_cNum-1]=res;
-        SpreadSheet.getSheetByName(logsheetname).appendRow(writeSheetData);
-        
-        if (readSheettoValue(logsheetname,broadCast_strart_rNum,host_cNum)!="--"){
-          learningBotSys_notify("1 file uploaded.\n"+"("+GoogleDriveFileName+")", logsheetname)
-        };
-        
-        count=parseInt(readSheettoValue(logsheetname,dataCount_rNum,1))
-        count++;
-        writetoSheet(logsheetname,dataCount_rNum,host_cNum, count)
-        
-      }else{
-        send_file_to_LearnBot(monitorTime,user_id,reply_mes_type,writeSheetData[paraContent_cNum-1]); //傳送貼圖
-        
+    } else if (botIsUpload_(reply_mes_type)) {
+      var savedUpload;
+      try {
+        savedUpload=botSaveUpload_(logsheetname,recorded.row,eventsth);
+      } catch (uploadError) {
+        if (reply_token) short_reply(reply_token,['❌已記錄這次上傳，但檔案備份失敗，請稍後重新上傳。']);
+        throw uploadError;
       }
-     
-      
-      
-    } // if  (reply_mes_type != "text") {
-    
+      if (savedUpload.duplicate) return ContentService.createTextOutput('OK');
+      var fileForwarded=0;
+      try {
+        fileForwarded=botForwardInteraction_(logsheetname,host_id,user_id,monitorTime,nickname,reply_mes_type,savedUpload.file.getName(),mes_timestamp,savedUpload.file.getName(),savedUpload.file);
+      } catch (forwardError) { fileForwarded=2; console.error('Upload saved; forwarding failed.'); }
+      writetoSheet(logsheetname,recorded.row,sentMess_cNum,fileForwarded);
+      if (reply_token) {
+        short_reply(reply_token,['已備份'+nickname+'上傳的檔案。','('+savedUpload.file.getName()+')']);
+        hasReplied=true;
+      }
+    }
+    if (!reply_token) return ContentService.createTextOutput('OK');
+
     var myclass=onClass()
     if (!hasReplied && myclass!="課堂進行中"){
       reply_mode=2
@@ -691,27 +612,14 @@ function doPost(e) {
   return ContentService.createTextOutput("OK");
 }
 
-function checkJumppage(logsheetname,reply_token,reply_mes_content){
-  var str=readSheettoValue(logsheetname,1,1)
-  if (str===""){return false;}
-  var array = str.split(",");
-  var num1=parseInt(array[0])
-  var where=array[1]
-  if (num1!=-1){
-    var num2=parseInt(reply_mes_content)
-    
-    if (num1>num2){num1=num2}
-    
-    writetoSheet(logsheetname,1,1,"")
-    carouselInfobyPage(reply_token,num1,where)
-    return true;
-  }else{
-    writetoSheet(logsheetname,1,1,"")
-    carouselInfobySearch(reply_token,where,reply_mes_content)
-    return true;
-  }
+function checkJumppage(logsheetname,reply_token,reply_mes_content,user_id){
+  return botHandleInput_(logsheetname,user_id,reply_token,reply_mes_content);
 }
-
+function botSafeUsername_(userId) {
+  if (!userId) return '(無使用者識別碼)';
+  try { return getUsername(userId); }
+  catch (error) { return '(未設定)'; }
+}
 function wait_info(targetId){
   return learningBotSys_notify("稍待..", targetId)
 }
@@ -723,7 +631,7 @@ function learningBotSys_notify(str, targetId){
   };
 
   var payload = {
-    'to': targetId || administrator_id,
+    'to': botRequireChat_(targetId || administrator_id),
     'messages': ProcMsg('text', '', '📺' + str)
   };
 
@@ -736,8 +644,6 @@ function learningBotSys_notify(str, targetId){
 
   return response.getResponseCode() === 200 ? 1 : 2;
 }
-
-
 
 function learningBot_notify(result){
   var detail;
@@ -753,6 +659,7 @@ function learningBot_notify(result){
 }
 
 function short_reply(reply_token,myValue){
+  if (!reply_token) return;
   var header = {
     'Content-Type': 'application/json; charset=UTF-8',
     'Authorization': 'Bearer ' + learnBot_CHANNEL_ACCESS_TOKEN,
@@ -776,6 +683,7 @@ function short_reply(reply_token,myValue){
   }
 
 function reply_message(mylogsheetname,host_id,user_id,monitorTime,reply_token,reply_mode,myValue){
+  if (!reply_token) return;
   var header = {
     'Content-Type': 'application/json; charset=UTF-8',
     'Authorization': 'Bearer ' + learnBot_CHANNEL_ACCESS_TOKEN,
@@ -903,9 +811,32 @@ function reply_message(mylogsheetname,host_id,user_id,monitorTime,reply_token,re
 
 
 
+function botForwardInteraction_(chatId,hostId,userId,monitorTime,nickname,type,content,time,attachment,storedFile) {
+  if (Number(monitorTime)!==0) return 0;
+  // Do not echo the administrator's own private conversation back to itself.
+  // Messages written by the administrator in OTHER chats must still notify.
+  if (botRequireChat_(chatId)===administrator_id) return 1;
+  var result=1;
+  try {
+    result=tell_to_LearnBot(chatId,hostId,userId,monitorTime,nickname,type,content,time);
+  } catch(error) {
+    result=2;
+    console.error('backupBot forwarding card failed: '+botBroadcastErrorText_(error.message||error));
+  }
+  if (botIsUpload_(type) || type==='sticker' || type==='location') {
+    try {
+      var mediaResult=send_file_to_LearnBot(monitorTime,userId,type,attachment,storedFile);
+      if (mediaResult!==1) result=2;
+    } catch(error) {
+      result=2;
+      console.error('backupBot forwarding attachment failed: '+botBroadcastErrorText_(error.message||error));
+    }
+  }
+  return result;
+}
+
 function tell_to_LearnBot(mylogsheetname,host_id,user_id,monitorTime,nickname,reply_mes_type,reply_mes_content,mytime){
   if (monitorTime!=0){return(0);}
-  if (user_id===administrator_id){return(1)}
   // myValue="⏰"+mytime+"\n💁🏻"+nickname+"\n📌["+reply_mes_type+']\n🧷('+reply_mes_content+")"
   
   var header = {
@@ -930,7 +861,7 @@ function tell_to_LearnBot(mylogsheetname,host_id,user_id,monitorTime,nickname,re
   
   var result=response.getContentText()
   
-  if (result==="{}"){
+  if (response.getResponseCode()===200){
     return(1)
   }else{
     learningBot_notify(result)
@@ -943,13 +874,13 @@ function tell_to_LearnBot(mylogsheetname,host_id,user_id,monitorTime,nickname,re
 
 
 
-function send_file_to_LearnBot(monitorTime,user_id,mes_type,fileName){
+function send_file_to_LearnBot(monitorTime,user_id,mes_type,fileName,storedFile){
   if (monitorTime!=0){return 0 ;}
-  if (user_id===administrator_id){return(1)}
   
   audio_duration=""
   if (mes_type!="sticker" & mes_type!="location"){
-    var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
+    if (!storedFile) throw new Error('A verified stored file is required.');
+    var dlURL=storedFile.getDownloadUrl();
     //await  dlURL;
     if (mes_type==="audio"){
       var  audio_duration=fileName.slice(0,fileName.indexOf("_"))
@@ -966,7 +897,8 @@ function send_file_to_LearnBot(monitorTime,user_id,mes_type,fileName){
   
   var payload = {
     'to': administrator_id,
-    'messages' : ProcMsg(mes_type,fileName,dlURL,audio_duration)
+    'messages' : storedFile && ['image','video','audio'].indexOf(mes_type)!==-1 ?
+      [botStoredMediaMessage_(storedFile,mes_type,audio_duration)] : ProcMsg(mes_type,fileName,dlURL,audio_duration)
   }
   
   var options = {
@@ -979,7 +911,7 @@ function send_file_to_LearnBot(monitorTime,user_id,mes_type,fileName){
   var response= UrlFetchApp.fetch(line_push_url , options);
   var result=response.getContentText()
   
-  if (result==="{}"){
+  if (response.getResponseCode()===200){
     
     return(1)
     

@@ -1,35 +1,30 @@
 
+function botDefaultThumbnail_() { return 'https://i.imgur.com/09DFChO.png'; }
+
 function getThumbnailURL(fileId) {
- // Example: var fileId = 'your-Drive-file-ID';
-  var url="https://www.googleapis.com/drive/v2/files/"+fileId
-  try{
-  var tkn = ScriptApp.getOAuthToken();//Get the OAuth token
-  options = {};
-  options.headers = {Authorization: 'Bearer ' + tkn}
-  options.muteHttpExceptions = true;
-  //Logger.log('url-> ' + tkn);
-
-rtrnObj = UrlFetchApp.fetch(url,options)
-
-  if (rtrnObj.getResponseCode() !== 200) { 
-       var thumbnailURL="https://i.imgur.com/09DFChO.png"
-    }else{
-      rtrnObj2=JSON.parse(rtrnObj)
-      var thumbnailURL=rtrnObj2.thumbnailLink
-  if (!thumbnailURL){var thumbnailURL="https://i.imgur.com/09DFChO.png"}
-
-  }
-//Logger.log(thumbnailURL)
-//return thumbnailURL
-
-  }catch(e){
-  var thumbnailURL="https://i.imgur.com/09DFChO.png"
+  if (!fileId) fileId=defaultThumbnailFileId;
+  if (!fileId) return botDefaultThumbnail_();
+  try {
+    var response=UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(fileId)+'?fields=thumbnailLink',{
+      headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()},muteHttpExceptions:true
+    });
+    return response.getResponseCode()===200 ? (JSON.parse(response.getContentText()).thumbnailLink||botDefaultThumbnail_()) : botDefaultThumbnail_();
+  } catch(error) { return botDefaultThumbnail_(); }
 }
-//Logger.log("URL->"+thumbnailURL)
-//Logger.log(rtrnObj)
-return thumbnailURL
 
-};
+// Never publish student media automatically. A private file remains an authenticated link.
+function botStoredMediaMessage_(file,type,duration) {
+  var access=file.getSharingAccess();
+  var publicRead=access===DriveApp.Access.ANYONE || access===DriveApp.Access.ANYONE_WITH_LINK;
+  if (!publicRead) return {type:'text',text:'已備份：'+file.getName()+'\n此檔案受 Google Drive 權限保護，請使用獲授權的帳號開啟：\n'+file.getUrl()};
+  var message={type:type,originalContentUrl:file.getDownloadUrl()};
+  if (type==='audio') {
+    var ms=Number(duration);
+    if (!Number.isFinite(ms)||ms<=0) throw new Error('音訊長度無效，無法建立音訊訊息。');
+    message.duration=ms;
+  } else message.previewImageUrl=getThumbnailURL(file.getId());
+  return message;
+}
 
 function getContentsOfTxtFile_(po) {
 try{

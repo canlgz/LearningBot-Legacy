@@ -1,61 +1,63 @@
-# LearningBot / backupBot：記寫歷程記錄的原始構想
+# LearningBot / backupBot：學生自建教學沙盒
 
-這是一份經過**去識別化處理的早期實作快照**。LearningBot 後來曾命名為
-`backupBot`。它提出的原始問題是：如何讓日常對話中的文字、檔案與課堂互動，留下可保存、
-可取回、可回看的記寫軌跡。
+以 LINE 記錄文字、連結與附件，保存於**學生自己的 Google 試算表及 Drive**，支援瀏覽、搜尋、廣播與轉訊。
 
-本庫用於程式閱讀與課程討論，呈現這個原始構想如何以 LINE、Google 試算表與 Google Drive
-落實；**不是**可直接投入正式環境的 Bot。
-它也不是安裝 WriteToLearn 或 ConsciousnessBot 的前置條件。
+## 從這裡開始
 
-## 目前公開版本
+1. [學生安裝流程](docs/INSTALL.md)：不需要老師的試算表、不需要手工製作 `templet`。
+2. [Script Properties 設定](CONFIG.example.md)：憑證只放在自己的 Apps Script。
+3. [安裝後驗收清單](docs/TESTING.md)：確認自己的 LINE／Google 環境正常。
 
-公開程式已同步至原始 Apps Script 的**第 288 版**。近期更新補上 webhook 對空白、非訊息與
-無效 JSON 請求的防護，避免同一事件重複回覆，並把一般系統通知改由 LINE Messaging API 推送；
-原始專案中的憑證與識別資料仍一律改為 Script Properties，不會上傳。
+2026-09-14 教學版整合了可讀頁籤、程式產生版型、指令與內容分離、廣播貼圖修正及管理員群組轉訊。
+這不是老師正式專案的直接匯出；已移除正式 token、固定群組／試算表／資料夾 ID 與私人遷移清單。
 
-## 為什麼建立這個資料庫？
+## 安裝後的行為
 
-LearningBot 以 LINE 作為個人學習檔案庫的入口：接收訊息與檔案、將資料存入綁定的
-Google 試算表與 Google 雲端硬碟，並透過 LINE 選單與 Flex Message 輪播卡片，讓學習者
-瀏覽、搜尋及取回自己的紀錄。
+- `initializeBot` 建立自己的資源。空白獨立 Apps Script 會建立試算表；綁定式專案則使用自己的綁定試算表。
+- 不用建立 `templet`、`Triggers` 或 `Learning Center` 頁籤。第一則群組訊息會自動建立完整格式及獨立子資料夾。
+- 頁籤、A3 和 Drive 子資料夾名稱同步；程式以固定 LINE ID → sheetId / folderId 對應，不以可讀名稱猜測收件者。
+- 一般文字、連結、貼圖資料和附件會記錄；已識別的指令、搜尋字串和頁碼操作不新增內容列。原有歷史列不刪除。
+- 新群組預設即時轉訊至管理員私訊，包含管理員本人在群組發出的訊息；管理員與 bot 的私聊不回送給自己。請先取得測試群組成員同意。
+- 私人附件預設以受 Drive 權限保護的連結傳送，不自動公開。已由擁有者設成公開可讀的媒體可直接顯示。
+- 學生自行部署。更新程式後需手動更新既有部署版本，通常不必更換 Webhook URL。
 
-建議先閱讀[原始構想與後續發展](docs/EVOLUTION.md)，再開啟原始碼；若要建立課堂用沙盒，請依照
-[詳細安裝流程](docs/INSTALL.md)操作。
+## 安全界線
 
-若要理解原始構想如何在 WriteToLearn 中擴展為完整的記寫系統，請閱讀
-[LearningBot、WriteToLearn 與 ConsciousnessBot 的關係說明](docs/LEARNING_TOOLS_COMPARISON.md)。
+這仍是**教學沙盒，不是已完成安全認證的正式課務系統**。請使用假資料。
+直接 GAS webhook 不能依本程式驗證 LINE 的原始簽章；本版增加私人 Webhook key 防止只知道部署 ID 的人直接寫入，但它不等於簽章驗證。
+涉及真實學生身分、成績或敏感內容時，需先使用能驗證簽章的前端服務並審查授權。請閱讀 [SECURITY.md](SECURITY.md)。
 
-## 重要安全提醒
+## 原始碼
 
-原始專案曾含有實際憑證與識別資料，本庫已經移除。此處**不包含**可用的正式 token、
-webhook、試算表、Drive 資料夾或學生資料。
+`src/` 的 13 個 JavaScript 檔上傳至 GAS 後是伺服端腳本：
 
-請勿將憑證寫入原始碼。請參閱[設定範例](CONFIG.example.md)與[資安說明](SECURITY.md)。
+| 檔案 | 用途 |
+| --- | --- |
+| setup.js、parameters.js | 初始化、私人設定與 webhook 入口檢查 |
+| sheetIdentity.js、sheetSchema.js | 固定身分對應、可讀名稱、自動版型 |
+| recording.js、main.js | 內容紀錄、事件處理、指令及轉訊 |
+| menu.js | 選單、廣播、取回附件 |
+| carouselInfo.js、show_searchResult.js | 瀏覽與搜尋 |
+| defined function.js、getThumbnailURL.js | 輔助函式、媒體及縮圖 |
+| triggers.js、broadcastValidation.js | 定時提醒與手動診斷 |
 
-## 原始碼結構
+`src/appsscript.json` 是 GAS manifest；`tests/` 只在本機或 GitHub Actions 執行，不上傳 GAS。
 
-早期 Apps Script 原始碼放在 [`src`](src) 中，盡量保留原本的檔案結構，讓學生能追查一個
-真實的 GAS / LINE Bot 原型：
+## 開發與驗證
 
-```text
-src/
-├── main.js                 LINE webhook 與訊息路由
-├── parameters.js           Script Properties 與試算表欄位常數
-├── defined function.js     共用輔助函式
-├── menu.js                 選單、瀏覽、廣播與檔案取回
-├── carouselInfo.js         分頁 Flex 輪播卡片
-├── show_searchResult.js    搜尋結果輪播卡片
-├── triggers.js             定時提醒
-└── getThumbnailURL.js      Google Drive 輔助函式
+Node.js 20+，不需安裝 npm 套件：
+
+```bash
+npm test
 ```
 
-## 課堂使用方式
+測試使用隔離的 Google／LINE 模擬服務，不會發真實訊息。真實驗收範圍見 [TESTING.md](docs/TESTING.md)。
 
-請將本庫與 WriteToLearn 一起閱讀，討論一個緊密耦合的實驗性 Bot，如何逐漸演變為較可重現、
-可維護的學習系統。若學生要安裝目前維護中的 WriteToLearn，請使用另一份
-[學生安裝資料庫](https://github.com/canlgz/WriteToLearn-Student-Setup)。
+## 原始構想與後續發展
 
-## 來源與授權
+保留早期「以日常對話留下可回看記寫歷程」的教育脈絡：
+[原始構想與發展](docs/EVOLUTION.md)、
+[與 WriteToLearn／ConsciousnessBot 的關係](docs/LEARNING_TOOLS_COMPARISON.md)。
+本庫不必作為其他系統的安裝前置條件。
 
-Copyright © Guanze Liao。本庫保留歷史專案作為教育比較用途；引用或再利用內容時請保留作者標示。
+Copyright © Guanze Liao。教育比較及再利用時請保留作者標示。

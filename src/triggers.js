@@ -48,7 +48,7 @@ function CreatTrigger(mylogsheetname,mymonitorTime){
 }
 
 function findTriggerId(myTriggerId){
-  var triggersheet=SpreadSheet.getSheetByName("Triggers")
+  var triggersheet=botSheet_("Triggers")
   var column = triggersheet.getRange(1,1,triggersheet.getLastRow()).getValues();
   var triIndex;
   for (var i = 0; i < column.length; i++){
@@ -66,26 +66,26 @@ function findTriggerId(myTriggerId){
 
 
 function show_memory(param){
-  if (!notify_CHANNEL_ACCESS_TOKEN) {
-    console.log('LINE Notify is not configured; skipped historical reminder.');
+  if (!param || !param.triggerUid) {
     return;
   }
   var active_id=param.triggerUid
   var sheets = SpreadSheet.getSheets();
   var  triTime = new Date();
   for (var i=0; i<sheets.length;i++){
-    var id_temp=readSheettoValue(sheets[i].getName(),trigger_rNum,trigger_cNum)
+    if (!botChatId_(sheets[i])) continue;
+    var id_temp=readSheettoValue(botChatId_(sheets[i]),trigger_rNum,trigger_cNum)
     
     if (id_temp===active_id){
-      var active_sheet=sheets[i].getName()
+      var active_sheet=botChatId_(sheets[i])
       var sheetIndex=sheets[i].getIndex()
-      var roomNameLable=readSheettoValue(sheets[i].getName(),roomNameLable_rNum,host_cNum)
-      var monitorTime=  readSheettoValue(sheets[i].getName(),monitorTime_rNum,host_cNum)
-      la=sheets[i].getLastRow();
-      var nnick=readSheettoValue(sheets[i].getName(),la,nicknameII_cNum)
-      var ttype=readSheettoValue(sheets[i].getName(),la,type_cNum)
-      var rreply=readSheettoValue(sheets[i].getName(),la,replyContent_cNum)
-      var theLastTime= readSheettoValue(sheets[i].getName(),la,time_cNum)
+      var roomNameLable=readSheettoValue(botChatId_(sheets[i]),roomNameLable_rNum,host_cNum)
+      var monitorTime=  readSheettoValue(botChatId_(sheets[i]),monitorTime_rNum,host_cNum)
+      la=botLastContentRow_(sheets[i]);
+      var nnick=readSheettoValue(botChatId_(sheets[i]),la,nicknameII_cNum)
+      var ttype=readSheettoValue(botChatId_(sheets[i]),la,type_cNum)
+      var rreply=readSheettoValue(botChatId_(sheets[i]),la,replyContent_cNum)
+      var theLastTime= readSheettoValue(botChatId_(sheets[i]),la,time_cNum)
       // triTime.setHours(triTime.getHours()+8);
       var nowtriTime=triTime.toISOString()
       //  triTime.setMinutes(triTime.getMinutes()+monitorTime);
@@ -96,6 +96,11 @@ function show_memory(param){
   }
   
   
+  // An obsolete trigger must not fall back to notifying the administrator.
+  if (!active_sheet) {
+    return;
+  }
+
   var time0 = new Date(theLastTime)
   
   
@@ -150,16 +155,7 @@ function show_memory(param){
             "\n ⏰="+TimeString+
               "\n👉🏻已有"+m1+"沒有更新。";
   
-  UrlFetchApp.fetch('https://notify-api.line.me/api/notify', {
-    'headers': {
-      'Authorization': 'Bearer ' + notify_CHANNEL_ACCESS_TOKEN,
-    },
-    'method': 'post',
-    'payload': {
-      'message':mess,
-      
-    }
-  });
+  return learningBotSys_notify(mess, active_sheet);
   
   
 }

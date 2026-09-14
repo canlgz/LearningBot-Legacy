@@ -161,7 +161,7 @@ filelist_bu={
 function getbrowsing(serId,reply_token,logsheetname){
   
   
-  var wishlist_sheet=SpreadSheet.getSheetByName(logsheetname)
+  var wishlist_sheet=botSheet_(logsheetname)
   
   
   switch(serId){
@@ -568,32 +568,20 @@ function onClass(mo){
 
 
 
-function confirm_previous_opr(myValue,logsheetname){
-  sheet=SpreadSheet.getSheetByName(logsheetname)
-  
-  opr=readSheettoValue(logsheetname,sheet.getLastRow()-1,replyContent_cNum)
-  
-  if (opr===myValue){
-    return true
-    
-  }else{
-    
-    
-    return false
-    
-    
-  }
+function confirm_previous_opr(myValue,logsheetname,userId){
+  var state=botGetOperation_(logsheetname,userId,'input');
+  return myValue === '//轉訊' && !!state && state.kind === 'timing';
 }
 
 function rowOf(mylogsheetname,cNum){
-  var sheet=SpreadSheet.getSheetByName(mylogsheetname)
+  var sheet=botSheet_(mylogsheetname)
   var column = sheet.getRange(1,cNum,sheet.getLastRow()).getValues();
   var wri_row_num=column.valueOf().toString().split(",").indexOf("");
   return(wri_row_num);
 }
 
 function changeName(mylogsheetname,myUserId){
-  sheet=SpreadSheet.getSheetByName(mylogsheetname)
+  sheet=botSheet_(mylogsheetname)
   column = sheet.getRange(1,useridI_cNum,sheet.getLastRow()).getValues();
   
   for (var i = 0; i < column.length; i++){
@@ -618,7 +606,7 @@ function admin_check(host_id,user_id){
 
 function findname(mylogsheetname,myUserId){
   
-  var sheet=SpreadSheet.getSheetByName(mylogsheetname)
+  var sheet=botSheet_(mylogsheetname)
   var column = sheet.getRange(1,useridI_cNum,sheet.getLastRow()).getValues();
   var foundIndex;
   for (var i = 0; i < column.length; i++){
@@ -636,38 +624,20 @@ function findname(mylogsheetname,myUserId){
 }
 
 function writetoSheet(mylogsheetname,myrang_r,myrang_c, myvalue){
-  SpreadSheet.getSheetByName(mylogsheetname).getRange(myrang_r,myrang_c).setValue(myvalue);
+  if (myrang_r === roomNameLable_rNum && myrang_c === host_cNum) {
+    return botRename_(mylogsheetname, myvalue);
+  }
+  botSheet_(mylogsheetname).getRange(myrang_r,myrang_c).setValue(myvalue);
   
 }
 
 function readSheettoValue(mylogsheetname,myrang_r,myrang_c){
-  return(SpreadSheet.getSheetByName(mylogsheetname).getRange(myrang_r,myrang_c).getValue());
+  return(botSheet_(mylogsheetname).getRange(myrang_r,myrang_c).getValue());
 }
 
 
 function checkSheetExist(logsheetname,user_id) {
-  
-  var sheetExist = SpreadSheet.getSheetByName(logsheetname);
-  if (!sheetExist) {
-    var templateSheet = SpreadSheet.getSheetByName('templet');
-    var newS = SpreadSheet.insertSheet(1, {template: templateSheet});
-    SpreadSheet.renameActiveSheet(logsheetname);
-    SpreadSheet.setActiveSheet(newS) 
-    var newfolder = GoogleDrive.getFolderById(destinationFolderID).createFolder(logsheetname);
-    var newUploadFolder_id = newfolder.getId();
-    writetoSheet(logsheetname,uploadFolder_rNum,host_cNum, newUploadFolder_id)
-    tempRoomName=roomIcon[getRoomRandom()]+logsheetname.slice(0, 5)
-    if (logsheetname===administrator_id){
-      tempRoomName="📺Dashboard®️"
-      writetoSheet(logsheetname,monitorTime_rNum,host_cNum, -1)
-    }
-    if (logsheetname===learningBotCenter_id){
-      tempRoomName="📺learningBotCenter®️"
-      writetoSheet(logsheetname,monitorTime_rNum,host_cNum, -1)
-    }
-    writetoSheet(logsheetname,roomNameLable_rNum,host_cNum, tempRoomName)
-    writetoSheet(logsheetname,host_rNum,host_cNum, user_id)
-  }
+  return botEnsureSheet_(logsheetname,user_id);
 }
 
 

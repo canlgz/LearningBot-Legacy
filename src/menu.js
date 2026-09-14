@@ -163,9 +163,12 @@ function broadCast_detailed(th_logsheetnam,rth,d_timeStamp,d_nickname,d_type,d_c
 }
 var GoogleDrive = DriveApp;
 
-function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token){
+function botBuildBroadcastMessages_(logsheetname,start_Row,end_Row,rowList){
   var allMsg=[]
-  for (var i=start_Row+1;i<=end_Row;i++){
+  var rows=rowList || Array.from({length:Math.max(0,end_Row-start_Row)},function(_,index){return start_Row+1+index;});
+  if (!rows.length || rows.length>5) throw new Error('Broadcast requires one to five content rows.');
+  for (var item=0;item<rows.length;item++){
+    var i=rows[item];
     var mes_type=readSheettoValue(logsheetname,i,type_cNum)
     var retMsg;
     switch(mes_type)
@@ -174,14 +177,14 @@ function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token){
         var replyContent=readSheettoValue(logsheetname,i,replyContent_cNum)
         retMsg = {
           'type': mes_type,
-          'text': replyContent
+          'text': botMenuText_(replyContent)
         };
         break;
         
       case 'file':
         var fileName=readSheettoValue(logsheetname,i,replyContent_cNum)
         
-        var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
+        var dlURL= botStoredFile_(logsheetname,i).getDownloadUrl();
         
         retMsg={
           "type": "flex",
@@ -205,7 +208,7 @@ function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token){
               "contents": [
                 {
                   "type": "text",
-                  "text": fileName,
+                  "text": botMenuText_(fileName),
                   "action": {
                     "type": "uri",
                     "label": "action",
@@ -227,43 +230,20 @@ function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token){
         break;
         
       case 'image':
-        var fileName=readSheettoValue(logsheetname,i,replyContent_cNum)
-        var filepara=readSheettoValue(logsheetname,i,paraContent_cNum)
-        var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
-        retMsg = {
-          'type': mes_type,
-          'originalContentUrl': dlURL,
-          'previewImageUrl': getThumbnailURL(filepara) //"https://i1.wp.com/120.127.161.35/gzliaoroot/wp-content/uploads/2018/09/cropped-IMG_0019-e1538468935142-2.jpg?zoom=2&fit=169%2C162"
-        };
+        retMsg=botStoredMediaMessage_(botStoredFile_(logsheetname,i),'image',undefined);
         break;
         
       case 'video':
-        var fileName=readSheettoValue(logsheetname,i,replyContent_cNum)
-        var filepara=readSheettoValue(logsheetname,i,paraContent_cNum)
-        var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
-        
-        retMsg = {
-          "type": mes_type,
-          "originalContentUrl": dlURL ,
-          "previewImageUrl": getThumbnailURL(filepara) // Public edition: use a file ID from your own Drive.
-        };
+        retMsg=botStoredMediaMessage_(botStoredFile_(logsheetname,i),'video',undefined);
         break;
         
       case 'audio':
-        
-        var fileName=readSheettoValue(logsheetname,i,replyContent_cNum)
-        var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
-        var  audio_duration=fileName.slice(0,fileName.indexOf("_"))
-        retMsg = {
-          "type": mes_type,
-          "originalContentUrl": dlURL,
-          "duration": audio_duration    
-        };
+        retMsg=botStoredMediaMessage_(botStoredFile_(logsheetname,i),'audio',Number(String(readSheettoValue(logsheetname,i,replyContent_cNum)).split('_')[0]));
         break;
         
       case 'sticker':
         var fileName=readSheettoValue(logsheetname,i,paraContent_cNum)
-        retMsg = JSON.parse(fileName);
+        retMsg = botOutgoingSticker_(fileName);
         break;
       case 'location':
         var fileName=readSheettoValue(logsheetname,i,paraContent_cNum)
@@ -279,13 +259,25 @@ function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token){
     allMsg.push(retMsg);
     
   }
+  return allMsg;
+}
+
+function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token,rowList){
+  var allMsg, target;
+  try {
+    allMsg=botBuildBroadcastMessages_(logsheetname,start_Row,end_Row,rowList);
+    target=botRequireChat_(broadCast_id);
+  } catch(error) {
+    botBroadcastNotice_(reply_token,'廣播尚未送出：組合內容失敗。'+botBroadcastErrorText_(error.message||error));
+    return false;
+  }
   var header = {
     'Content-Type': 'application/json; charset=UTF-8',
     'Authorization': 'Bearer ' + learnBot_CHANNEL_ACCESS_TOKEN,
   }
   
   var payload = {
-    'to': broadCast_id,
+    'to': target,
     'messages' :  allMsg
     
   }
@@ -297,29 +289,63 @@ function sendBroadCast(logsheetname,broadCast_id,start_Row,end_Row,reply_token){
     'muteHttpExceptions':true
   }
   
-  var response= UrlFetchApp.fetch(line_push_url , options);
-  var result=response.getContentText()
-  
-  if (result==="{}"){
-    str=["已完成送出。"]
-    short_reply(reply_token,str);
-    
-    
-  }else{
-    
-    str=["送出過久，廣播失敗。"]
-    short_reply(reply_token,str);
+  var response;
+  try {
+    response=UrlFetchApp.fetch(line_push_url,options);
+  } catch(error) {
+    // No automatic retry: the request may already have reached LINE.
+    console.error('backupBot broadcast: delivery outcome unknown (network exception).');
+    botBroadcastNotice_(reply_token,'連線中斷，無法確認廣播是否送達。請先查看目標群組，勿立即重送。');
+    return null;
   }
+  var status=response.getResponseCode();
+  if (status===200) {
+    // A failed acknowledgement must not change a successful push into a failure.
+    botBroadcastNotice_(reply_token,'已完成送出。');
+    return true;
+  }
+  var failure;
+  try { failure=JSON.parse(response.getContentText()); }
+  catch(error) { failure={message:'LINE 未提供可讀取的錯誤說明。'}; }
+  var details=Array.isArray(failure.details) ? failure.details.map(function(detail){
+    return botBroadcastErrorText_(detail.property)+': '+botBroadcastErrorText_(detail.message);
+  }).join('\n') : '';
+  var reason=botBroadcastErrorText_(failure.message)+(details ? '\n'+details : '');
+  console.error('backupBot broadcast HTTP '+status+' ['+allMsg.map(function(message){return message.type;}).join(',')+']: '+reason);
+  botBroadcastNotice_(reply_token,'廣播未成功（LINE HTTP '+status+'）。\n'+reason+
+    (status>=500 ? '\n無法確認是否送達，請先查看目標群組，勿立即重送。' : '\n可修正原因後重新檢視廣播；程式不會自動重送。'));
+  return status>=500 ? null : false;
+}
+
+function botBroadcastErrorText_(value) {
+  var text=String(value==null?'':value);
+  if (learnBot_CHANNEL_ACCESS_TOKEN) text=text.split(learnBot_CHANNEL_ACCESS_TOKEN).join('[已隱藏憑證]');
+  return text.replace(/https?:\/\/\S+/g,'[連結]').slice(0,500);
+}
+
+function botBroadcastNotice_(replyToken,text) {
+  try { short_reply(replyToken,[text]); }
+  catch(error) { console.error('backupBot broadcast acknowledgement failed; delivery result retained.'); }
+}
+
+function botOutgoingSticker_(stored) {
+  var message=typeof stored==='string' ? JSON.parse(stored) : stored;
+  if (!message || !message.packageId || !message.stickerId) throw new Error('貼圖缺少 packageId 或 stickerId。');
+  // A received quoteToken belongs to the SOURCE chat. Copying it to a different
+  // destination asks LINE to quote a message that does not exist in that chat.
+  // Preserve the raw received object in Sheets; only normalize the outgoing copy.
+  return {type:'sticker',packageId:String(message.packageId),stickerId:String(message.stickerId)};
 }
 
 
 function broadCast_summary(logsheetname,end_row,reply_token){
-  var sheet_th = SpreadSheet.getSheetByName(logsheetname);
+  var sheet_th = botSheet_(logsheetname);
   var start_row=parseInt(readSheettoValue(logsheetname,broadCast_strart_rNum,host_cNum))
   temp=readSheettoValue(logsheetname,start_row,replyContent_cNum)
   temp1=temp.slice(temp.indexOf("➡️")+1,temp.length);
-  roomLable=temp1.slice(0,temp1.indexOf("#"));
-  sheetIndex=parseInt(temp1.slice(temp1.indexOf("#")+1, temp1.length))
+  roomLable=temp1.slice(0,temp1.lastIndexOf("#"));
+  var broadcastChatId = botBroadcastChat_(temp1.slice(temp1.lastIndexOf("#")+1));
+  sheetIndex=botSheet_(broadcastChatId).getIndex()
   temp2="廣播至"+roomLable+"(💾="+sheetIndex+")?"
   
   
@@ -350,7 +376,7 @@ function broadCast_summary(logsheetname,end_row,reply_token){
     writetoSheet(logsheetname,broadCast_strart_rNum+1,host_cNum, "--")
     short_reply(reply_token,all)
   }else{
-    writetoSheet(logsheetname,broadCast_strart_rNum+1,host_cNum, sheetIndex+"#"+start_row+"-"+parseInt(start_row+Brange))
+    writetoSheet(logsheetname,broadCast_strart_rNum+1,host_cNum, broadcastChatId+"#"+start_row+"-"+parseInt(start_row+Brange))
     confirm_broadCast(reply_token,all,temp2)
   }
   //writetoSheet(logsheetname,broadCast_strart_rNum,host_cNum, "--")
@@ -367,7 +393,7 @@ function confirm_broadCast(reply_token,myValue,temp2){
     "altText": "確認廣播訊息？",
     "template": {
       "type": "confirm",
-      "text": temp2,
+      "text": botMenuText_(temp2),
       "actions": [
         {
           "type": "message",
@@ -416,9 +442,9 @@ function  browsing_flexing(sheetIndex,reply_token,targetId){
   }
   
   var shth=sheetIndex-1
-  var th_logsheetnam=sheets[shth].getName()
+  var th_logsheetnam=botChatId_(sheets[shth])
   var id_temp=readSheettoValue(th_logsheetnam,trigger_rNum,trigger_cNum)
-  var sheet_th_lastRow=sheets[shth].getLastRow()
+  var sheet_th_lastRow=botLastContentRow_(sheets[shth])
   var roomNameLable=readSheettoValue(th_logsheetnam,roomNameLable_rNum,host_cNum)
   learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable, targetId)
   var dataCount=readSheettoValue(th_logsheetnam,dataCount_rNum,host_cNum)
@@ -436,7 +462,7 @@ function  browsing_flexing(sheetIndex,reply_token,targetId){
         "contents": [
           {
             "type": "text",
-            "text": roomNameLable,
+            "text": botMenuText_(roomNameLable),
             "weight": "regular",
             "align": "center",
             "size": "lg",
@@ -536,16 +562,11 @@ function  browsing_flexing(sheetIndex,reply_token,targetId){
   
   UrlFetchApp.fetch(line_reply_url , options);   
 }
-function wsw(){
-// Historical scratch helper. Use a file ID from your own Drive when experimenting.
-  var dlURL= GoogleDrive.getFilesByName("13214003366598.jpg").next().getDownloadUrl() 
-  
-  Logger.log(dlURL)
-
-}
+function wsw() { throw new Error("Historical demo disabled; use the bot menu."); }
 
 
 function retriveFile(logsheetname,dataRow,reply_token){
+  if (!botFileReady_(botSheet_(logsheetname),Number(dataRow))) return short_reply(reply_token,['這筆上傳尚未備份成功，請重新上傳。']);
   var allMsg=[]
   
   var mes_type=readSheettoValue(logsheetname,dataRow,type_cNum)
@@ -561,7 +582,7 @@ function retriveFile(logsheetname,dataRow,reply_token){
     case 'file':
       var fileName=readSheettoValue(logsheetname,dataRow,replyContent_cNum)
       var thfileID=readSheettoValue(logsheetname,dataRow,paraContent_cNum)
-      var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
+      var dlURL= botStoredFile_(logsheetname,dataRow).getDownloadUrl();
       //var dlURL= GoogleDrive.getFileById(thfileID).getDownloadUrl();
       retMsg={
         "type": "flex",
@@ -593,7 +614,7 @@ function retriveFile(logsheetname,dataRow,reply_token){
       },
               {
                 "type": "text",
-                "text": fileName,
+                "text": botMenuText_(fileName),
                 "action": {
                   "type": "uri",
                   "label": "action",
@@ -616,48 +637,20 @@ function retriveFile(logsheetname,dataRow,reply_token){
       break;
       
     case 'image':
-      var fileName=readSheettoValue(logsheetname,dataRow,replyContent_cNum)
-      var filepara=readSheettoValue(logsheetname,dataRow,paraContent_cNum)
-      var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
-     //var dlURL= GoogleDrive.getFileById(filepara).getDownloadUrl();
-
-      retMsg = {
-        'type': mes_type,
-        'originalContentUrl': dlURL,
-        'previewImageUrl': getThumbnailURL(filepara)//dlURL,//"https://i1.wp.com/120.127.161.35/gzliaoroot/wp-content/uploads/2018/09/cropped-IMG_0019-e1538468935142-2.jpg?zoom=2&fit=169%2C162"
-      };
+        retMsg=botStoredMediaMessage_(botStoredFile_(logsheetname,dataRow),'image',undefined);
       break;
       
     case 'video':
-      var fileName=readSheettoValue(logsheetname,dataRow,replyContent_cNum)
-      var filepara=readSheettoValue(logsheetname,dataRow,paraContent_cNum)
-      var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
-      //var dlURL= GoogleDrive.getFileById(filepara).getDownloadUrl();
-      retMsg = {
-        "type": mes_type,
-        "originalContentUrl": dlURL ,
-        "previewImageUrl": getThumbnailURL(filepara) // Public edition: use a file ID from your own Drive.
-      };
+        retMsg=botStoredMediaMessage_(botStoredFile_(logsheetname,dataRow),'video',undefined);
       break;
       
     case 'audio':
-      
-      var fileName=readSheettoValue(logsheetname,dataRow,replyContent_cNum)
-      //var filepara=readSheettoValue(logsheetname,dataRow,paraContent_cNum)
-      var dlURL= GoogleDrive.getFilesByName(fileName).next().getDownloadUrl();
-       //var dlURL= GoogleDrive.getFileById(filepara).getDownloadUrl();
-       
-      var  audio_duration=fileName.slice(0,fileName.indexOf("_"))
-      retMsg = {
-        "type": mes_type,
-        "originalContentUrl": dlURL,
-        "duration": audio_duration    
-      };
+        retMsg=botStoredMediaMessage_(botStoredFile_(logsheetname,dataRow),'audio',Number(String(readSheettoValue(logsheetname,dataRow,replyContent_cNum)).split('_')[0]));
       break;
       
     case 'sticker':
       var fileName=readSheettoValue(logsheetname,dataRow,paraContent_cNum)
-      retMsg = JSON.parse(fileName);
+      retMsg = botOutgoingSticker_(fileName);
       break;
     case 'location':
       var fileName=readSheettoValue(logsheetname,dataRow,paraContent_cNum)
@@ -697,7 +690,12 @@ function retriveFile(logsheetname,dataRow,reply_token){
 }
 
 
-function broadCast_flexing(memo_option, targetId){
+function botMenuText_(value, fallback) {
+  var text = value == null ? '' : String(value);
+  return text.trim() ? text : (fallback || '（未命名）');
+}
+
+function broadCast_flexing(memo_option, targetId, quiet){
   
   var sheets = SpreadSheet.getSheets();
   var all=[]
@@ -715,16 +713,17 @@ function broadCast_flexing(memo_option, targetId){
   
     all.push(memo_option[0])
  
-  for (var i=1; i<sheets.length;i++){
+  for (var i=0; i<sheets.length;i++){
+    if (!botChatId_(sheets[i])) continue;
     
-    if (sheets[i].getName()===learningBotCenter_id | sheets[i].getName()===administrator_id){continue;}
-    var th_logsheetnam=sheets[i].getName()
+    if (botChatId_(sheets[i])===learningBotCenter_id | botChatId_(sheets[i])===administrator_id){continue;}
+    var th_logsheetnam=botChatId_(sheets[i])
     var id_temp=readSheettoValue(th_logsheetnam,trigger_rNum,trigger_cNum)
     var sheetIndex=sheets[i].getIndex()
     var sheetId=sheets[i].getSheetId()
-    var sheet_th_lastRow=sheets[i].getLastRow()
-    var roomNameLable=readSheettoValue(th_logsheetnam,roomNameLable_rNum,host_cNum)
-    learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable, targetId)
+    var sheet_th_lastRow=botLastContentRow_(sheets[i])
+    var roomNameLable=botMenuText_(readSheettoValue(th_logsheetnam,roomNameLable_rNum,host_cNum),sheets[i].getName())
+    if (!quiet) learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable, targetId)
     var dataCount=readSheettoValue(th_logsheetnam,dataCount_rNum,host_cNum)
     var showNum=2
     //if (showNum>dataCount){showNum=dataCount}
@@ -737,7 +736,7 @@ function broadCast_flexing(memo_option, targetId){
         "contents": [
           {
             "type": "text",
-            "text": roomNameLable,
+            "text": botMenuText_(roomNameLable),
             "weight": "regular",
             "align": "center",
             "size": "lg",
@@ -792,7 +791,7 @@ function broadCast_flexing(memo_option, targetId){
             "action": {
               "type": "message",
               "label": "在這裡廣播📡",
-              "text": "//蒐集廣播訊息 ➡️"+roomNameLable+"#"+sheetIndex
+              "text": "//蒐集廣播訊息 ➡️"+roomNameLable+"#"+th_logsheetnam
             },
             "style": "link"
           }
@@ -820,7 +819,7 @@ function broadCast_flexing(memo_option, targetId){
     
     bubble_num= ori.contents.contents.length
     if (bubble_num>=10){
-      learningBotSys_notify("檔案夾超過10個。", targetId)
+      if (!quiet) learningBotSys_notify("檔案夾超過10個。", targetId)
       var i=sheets.length;
     }else{
       ori.contents.contents.push(th)
@@ -847,20 +846,21 @@ function fileList_detailed(mode, targetId){
   
   
   order=0
-  for (var i=1; i<sheets.length;i++){
-    if (sheets[i].getName()===learningBotCenter_id | sheets[i].getName()===administrator_id){continue;}
-    var id_temp=readSheettoValue(sheets[i].getName(),trigger_rNum,trigger_cNum)
+  for (var i=0; i<sheets.length;i++){
+    if (!botChatId_(sheets[i])) continue;
+    if (botChatId_(sheets[i])===learningBotCenter_id | botChatId_(sheets[i])===administrator_id){continue;}
+    var id_temp=readSheettoValue(botChatId_(sheets[i]),trigger_rNum,trigger_cNum)
     order++
       var sheetIndex=sheets[i].getIndex();
     var sheetId=sheets[i].getSheetId();
-    var roomNameLable=readSheettoValue(sheets[i].getName(),roomNameLable_rNum,host_cNum);
-    var monitorTime=readSheettoValue(sheets[i].getName(),monitorTime_rNum,host_cNum);
-    var dataCount=readSheettoValue(sheets[i].getName(),dataCount_rNum,host_cNum);
-    var userNums=rowOf(sheets[i].getName(),useridI_cNum);
+    var roomNameLable=readSheettoValue(botChatId_(sheets[i]),roomNameLable_rNum,host_cNum);
+    var monitorTime=readSheettoValue(botChatId_(sheets[i]),monitorTime_rNum,host_cNum);
+    var dataCount=readSheettoValue(botChatId_(sheets[i]),dataCount_rNum,host_cNum);
+    var userNums=rowOf(botChatId_(sheets[i]),useridI_cNum);
     learningBotSys_notify("讀取💾="+sheetIndex+roomNameLable, targetId);
-    var timeStamp=readSheettoValue(sheets[i].getName(),sheets[i].getLastRow(),time_cNum)
-    var d_type=readSheettoValue(sheets[i].getName(),sheets[i].getLastRow(),type_cNum)
-    var d_content=readSheettoValue(sheets[i].getName(),sheets[i].getLastRow(),replyContent_cNum)
+    var timeStamp=readSheettoValue(botChatId_(sheets[i]),botLastContentRow_(sheets[i]),time_cNum)
+    var d_type=readSheettoValue(botChatId_(sheets[i]),botLastContentRow_(sheets[i]),type_cNum)
+    var d_content=readSheettoValue(botChatId_(sheets[i]),botLastContentRow_(sheets[i]),replyContent_cNum)
     if (monitorTime===0){
       str="即時轉訊"
       wordColor="#000099"
@@ -880,12 +880,12 @@ function fileList_detailed(mode, targetId){
     
     switch(mode){
       case 0:
-        kk3a=JSON.stringify({'id':3,'i':i,'m':-1});//暫停
-        kk3b=JSON.stringify({'id':3,'i':i,'m':0});//即時
-        kk3c=JSON.stringify({'id':3,'i':i,'m':120});//2時
-        kk3d=JSON.stringify({'id':3,'i':i,'m':360});//6時
-        kk3e=JSON.stringify({'id':3,'i':i,'m':720});//12時
-        kk3f=JSON.stringify({'id':3,'i':i,'m':1440});//1日
+        kk3a=JSON.stringify({'id':3,'i':i,'chatId':botChatId_(sheets[i]),'m':-1});//暫停
+        kk3b=JSON.stringify({'id':3,'i':i,'chatId':botChatId_(sheets[i]),'m':0});//即時
+        kk3c=JSON.stringify({'id':3,'i':i,'chatId':botChatId_(sheets[i]),'m':120});//2時
+        kk3d=JSON.stringify({'id':3,'i':i,'chatId':botChatId_(sheets[i]),'m':360});//6時
+        kk3e=JSON.stringify({'id':3,'i':i,'chatId':botChatId_(sheets[i]),'m':720});//12時
+        kk3f=JSON.stringify({'id':3,'i':i,'chatId':botChatId_(sheets[i]),'m':1440});//1日
        
         var format={
           "type": "box",
@@ -994,7 +994,7 @@ function fileList_detailed(mode, targetId){
         
         
       case 1:
-            pa=JSON.stringify({'id':1,'sheetIndex':sheetIndex})
+            pa=JSON.stringify({'id':1,'sheetIndex':sheetIndex,'chatId':botChatId_(sheets[i])})
             var format={
             "type": "box",
             "layout": "vertical",
@@ -1326,7 +1326,7 @@ function menu_flexing(mylogsheetname,host_id,user_id,monitorTime,mynickname){
             "color": "#000000"
           },{
             "type": "text",
-            "text": mynickname,
+            "text": botMenuText_(mynickname),
             "size": "xl"
           },
           {
@@ -1394,7 +1394,7 @@ function menu_flexing(mylogsheetname,host_id,user_id,monitorTime,mynickname){
               },
               {
                 "type": "text",
-                "text": roomNametemp,
+                "text": botMenuText_(roomNametemp),
                 "color": "#000000"
               }
             ]
@@ -1412,7 +1412,7 @@ function menu_flexing(mylogsheetname,host_id,user_id,monitorTime,mynickname){
               },
               {
                 "type": "text",
-                "text": temp1,
+                "text": botMenuText_(temp1),
                 "size": "md"
               }
             ]
@@ -1427,7 +1427,7 @@ function menu_flexing(mylogsheetname,host_id,user_id,monitorTime,mynickname){
               },
               {
                 "type": "text",
-                "text": temp,
+                "text": botMenuText_(temp),
                 "color": "#000000"
               }
             ]
@@ -1538,7 +1538,7 @@ function feedback_flexing(feedback_message){
             "color": "#000000"
           },{
             "type": "text",
-            "text": feedback_message,
+            "text": botMenuText_(feedback_message),
             "size": "md",
             "wrap": true
           }
@@ -1559,8 +1559,8 @@ function feedback_flexing(feedback_message){
 
 function mess_flexing(mylogsheetname,mytime,nickname,reply_mes_type,reply_mes_content){
   roomLable=readSheettoValue(mylogsheetname,roomNameLable_rNum,host_cNum);
-  sheetIndex=SpreadSheet.getSheetByName(mylogsheetname).getIndex()
-  sheetId=SpreadSheet.getSheetByName(mylogsheetname).getSheetId()
+  sheetIndex=botSheet_(mylogsheetname).getIndex()
+  sheetId=botSheet_(mylogsheetname).getSheetId()
   ppp=[{
     "type": "flex",
     "altText": "（即時訊息）",
@@ -1577,7 +1577,7 @@ function mess_flexing(mylogsheetname,mytime,nickname,reply_mes_type,reply_mes_co
             "type": "separator"
           },{
             "type": "text",
-            "text": roomLable
+            "text": botMenuText_(roomLable)
           },{
             "type": "text",
             "text": "🗄id="+sheetId+" 💾index="+sheetIndex
@@ -1658,7 +1658,7 @@ function ProcMsg(mes_type,fileName,myLink,audio_duration)
             "contents": [
               {
                 "type": "text",
-                "text": fileName,
+                "text": botMenuText_(fileName),
                 "action": {
                   "type": "uri",
                   "label": "action",
@@ -1692,7 +1692,7 @@ function ProcMsg(mes_type,fileName,myLink,audio_duration)
       retMsg = {
         "type": type,
         "originalContentUrl": myLink ,
-                        "previewImageUrl": getThumbnailURL(defaultThumbnailFileId)
+        "previewImageUrl": botDefaultThumbnail_()
       };
       break;
       
@@ -1705,7 +1705,7 @@ function ProcMsg(mes_type,fileName,myLink,audio_duration)
       };
       break;
     case 'sticker':
-      retMsg = JSON.parse(myLink);
+      retMsg = botOutgoingSticker_(myLink);
       break;
     case 'location':
       myLink=JSON.parse(myLink);
