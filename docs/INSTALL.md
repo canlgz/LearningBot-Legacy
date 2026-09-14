@@ -2,6 +2,40 @@
 
 適用於自己的教學沙盒，請用假資料及獨立測試群組。程式不會使用老師的正式試算表或資料夾。
 
+## 安裝流程圖
+
+圖中的 **①–⑦ 對應下方第 1–7 節**。先完成上一個檢查點，再往下操作；不需要複製老師的試算表或建立 `templet`。
+
+```mermaid
+flowchart TD
+    A["① 建立 LINE 官方帳號並啟用 Messaging API<br/>取得自己的 token 與 Your user ID"]
+    B["② 下載 ZIP，建立自己的 Apps Script<br/>貼入 13 個腳本與 appsscript.json"]
+    C["③ 在指令碼屬性填入<br/>LINE_CHANNEL_ACCESS_TOKEN<br/>ADMINISTRATOR_LINE_USER_ID"]
+    D["④ 執行 initializeBot 並完成 Google 授權<br/>自動準備試算表、資料夾、版型與 WEBHOOK_KEY"]
+    E{"執行記錄顯示 ready:true？"}
+    F["依錯誤檢查憑證、ID 與 Google 權限<br/>修正後重跑；不要刪除既有資料或屬性"]
+    G["⑤ 手動部署為網頁應用程式<br/>執行身分：我／存取權：所有人"]
+    H["將 /exec?key=自己的 WEBHOOK_KEY<br/>填入 LINE Webhook URL<br/>開啟 Use webhook 並按 Verify"]
+    I["⑥ 實際驗收：私訊 bot、測試群組發文字<br/>確認自動建頁、內容記錄、管理員提醒<br/>再測試改名與搜尋"]
+    J{"實際訊息與資料對應正確？"}
+    K["依疑難排解檢查部署版本、完整 key、<br/>好友狀態、轉訊設定、額度與執行錯誤<br/>修正程式後須更新部署，再重測"]
+    L["⑦ 測試附件備份及廣播<br/>私人附件維持需權限的 Drive 連結"]
+    M["完成完整驗收清單<br/>開始使用自己的教學沙盒"]
+    A --> B --> C --> D --> E
+    E -->|否| F --> D
+    E -->|是| G --> H --> I --> J
+    J -->|否| K --> I
+    J -->|是| L --> M
+```
+
+**三個容易混淆的地方：**
+
+- 第 ② 步二選一：獨立 Apps Script 會在初始化時建立試算表；從自己的空白試算表開啟 Apps Script，則使用該試算表。
+- 儲存程式 ≠ 部署；LINE 的 Verify 通過 ≠ 實際記錄、轉訊與廣播皆正常。
+- 群組第一則訊息才會建立對應頁籤及子資料夾；只是邀 bot 入群還不會建立。
+
+若下載後的文字編輯器沒有顯示圖，請在 GitHub 開啟本頁，或依下方編號逐步操作。
+
 ## 1. 建立自己的 LINE 官方帳號
 
 1. 建立 LINE Official Account，在 **LINE Official Account Manager → 設定 → Messaging API** 啟用 Messaging API 並選擇自己的 Provider。
