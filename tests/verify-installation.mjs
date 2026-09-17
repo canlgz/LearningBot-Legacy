@@ -58,6 +58,12 @@ run('webhook without the secret cannot create sheets, write rows or send message
   e.parameter={key:'wrong'};assert.equal(h.context.doPost(e),'Unauthorized');assert.equal(h.ss.sheets.length,2);
 });
 
+run('browser installation check distinguishes an accessible initialized webhook from a wrong key',()=>{
+  const h=fresh(),c=h.context;c.initializeBot();
+  assert.match(c.doGet({parameter:{key:h.props.WEBHOOK_KEY}}),/webhook is reachable/);
+  assert.match(c.doGet({parameter:{key:'wrong'}}),/missing or invalid/);
+});
+
 run('correct secret without initialization cannot write data',()=>{
   const h=fresh();h.props.WEBHOOK_KEY='configured-key';
   assert.throws(()=>h.context.doPost(webhook(h,'尚未初始化')),/initializeBot/);assert.equal(h.ss.sheets.length,1);

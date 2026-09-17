@@ -96,19 +96,21 @@ flowchart TD
 ## 5. 自行部署並設定 webhook
 
 1. Apps Script → 部署 → 新增部署作業 → 網頁應用程式。
-2. 執行身分「我」，存取權「所有人」（LINE 伺服器不能登入 Google）。
-3. 完成後複製結尾為 `/exec` 的網址，不要使用 `/dev`。
-4. 到指令碼屬性複製 `WEBHOOK_KEY`，組合成：
+2. **執行身分選「我」；誰可以存取選「所有人」。**不是「所有 Google 帳戶使用者」、不是「僅限機構內使用者」、也不是「只有我」；LINE 伺服器不能登入 Google。
+3. 若下拉選單沒有「所有人」，代表學生帳號／學校 Workspace 政策不允許匿名網頁應用程式。此帳號不能直接作為 LINE webhook；應改用允許的個人帳號或請學校管理員開放，不能靠程式碼繞過。
+4. 完成後複製**此部署視窗顯示**、結尾為 `/exec` 的網址，不要使用 `/dev`。每次變更部署存取權或更新版本，都重新由此視窗複製一次。
+5. 到指令碼屬性複製 `WEBHOOK_KEY`，組合成：
 
 ```text
 你的 /exec 網址?key=你自己的 WEBHOOK_KEY
 ```
 
-5. 將**完整網址**填入 LINE Developers → Messaging API → Webhook URL，開啟 Use webhook。
-6. 按 Verify，再依下一節傳送實際訊息驗收。
+6. 先在**未登入 Google 的無痕視窗**開啟完整網址：應顯示 `LearningBot webhook is reachable.`。若看到 Google 登入頁、401 或權限不足，回到第 2–4 步重新以「我／所有人」部署；此時尚未輪到 LINE 設定。
+7. 將**完整網址**填入 LINE Developers → Messaging API → Webhook URL，開啟 Use webhook。
+8. 按 Verify，再依下一節傳送實際訊息驗收。
 
 密鑰與完整網址不要公開、截圖或放進 repo；它們是通行憑證。
-Verify 只代表連線檢查，不能取代下列驗收。缺少 key 時程式不寫入，即使 Google 傳輸層回應成功也不表示 bot 已可運作。
+Verify 只代表連線檢查，不能取代下列驗收。先完成第 6 步的無痕視窗測試；缺少 key 時程式不寫入，即使 Google 傳輸層回應成功也不表示 bot 已可運作。
 Apps Script 請求參數及部署說明：[Google 官方文件](https://developers.google.com/apps-script/guides/web)。
 
 ## 6. 第一次使用
@@ -179,7 +181,8 @@ clasp push 上傳原碼，不等於部署。接續第 3–7 節，由你在網�
 | 現象 | 檢查 |
 | --- | --- |
 | 初始化缺少設定 | 核對兩個必填鍵；管理員必須是 U 開頭的真正 user ID |
-| Verify 通過但沒資料 | 確認 /exec、?key、Use webhook、最新部署、initializeBot 成功，並查看執行錯誤 |
+| LINE Verify 出現 401 Unauthorized | 這是 Google 部署層拒絕匿名存取，不是 LINE token 或 WEBHOOK_KEY 錯誤。到「管理部署作業」編輯網頁應用程式，確認「執行身分：我／誰可以存取：所有人」，部署新版本並改貼部署視窗的完整 `/exec?key=...` 網址；若沒有「所有人」，請使用允許的帳號或洽 Workspace 管理員 |
+| Verify 通過但沒資料 | 確認無痕視窗可開完整 `/exec?key=...`、Use webhook、最新部署、initializeBot 成功，並查看執行錯誤 |
 | 改名後沒同步 | initializeBot 是否完成兩個名稱同步觸發器；A4 是否被誤改；Drive 是否可寫 |
 | 有記錄但無即時提醒 | A5 是否為 0；管理員是否已加 bot 好友／未封鎖；額度是否用完 |
 | 圖片顯示成連結 | 私人附件的預設安全行為，不是備份失敗 |

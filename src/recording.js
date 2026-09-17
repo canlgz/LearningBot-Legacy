@@ -273,3 +273,14 @@ function doPost(e) {
   if (failures) throw new Error('backupBot could not finish ' + failures + ' event(s).');
   return ContentService.createTextOutput('OK');
 }
+
+// A browser-only installation check. LINE itself uses doPost.
+function doGet(e) {
+  if (!botAcceptWebhook_(e)) return ContentService.createTextOutput('Webhook key missing or invalid.');
+  try {
+    botAssertReady_();
+    return ContentService.createTextOutput('LearningBot webhook is reachable. You may now use LINE Verify.');
+  } catch (error) {
+    return ContentService.createTextOutput('LearningBot is not initialized. Run initializeBot first.');
+  }
+}
